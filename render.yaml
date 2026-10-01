@@ -1,0 +1,25 @@
+# Render Static Site — AxonAfrica Frontend
+# https://render.com/docs/static-sites
+#
+# In Render: New → Static Site → connect AxonAfricaFrontend
+# Build: npm install && npm run build
+# Publish: dist
+# Env: VITE_API_URL=https://YOUR-API.onrender.com
+
+services:
+  - type: web
+    name: axonafrica-web
+    runtime: static
+    plan: free
+    branch: main
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+      - key: NODE_VERSION
+        value: "22"
