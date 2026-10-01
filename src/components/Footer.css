@@ -1,0 +1,85 @@
+.site-footer {
+  background: var(--darkest-green);
+  color: color-mix(in srgb, var(--white) 88%, transparent);
+  padding: 3.5rem 0 1.5rem;
+}
+
+.site-footer__grid {
+  display: grid;
+  gap: 2rem;
+}
+
+@media (min-width: 800px) {
+  .site-footer__grid {
+    grid-template-columns: 1.4fr 1fr 1fr 1.4fr;
+  }
+}
+
+.site-footer h2 {
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sun-gold);
+  margin-bottom: 0.85rem;
+}
+
+.site-footer ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.site-footer a:hover {
+  color: var(--sun-gold);
+}
+
+.site-footer__brand p {
+  margin-top: 1rem;
+  max-width: 28ch;
+  font-size: 0.95rem;
+}
+
+.site-footer__news p {
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.site-footer__news-row {
+  display: grid;
+  gap: 0.5rem;
+}
+
+@media (min-width: 520px) {
+  .site-footer__news-row {
+    grid-template-columns: 1fr auto;
+  }
+}
+
+.site-footer__news input {
+  min-height: 48px;
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--white) 25%, transparent);
+  background: color-mix(in srgb, var(--white) 8%, transparent);
+  color: var(--white);
+  padding: 0.7rem 1rem;
+}
+
+.site-footer__news input::placeholder {
+  color: color-mix(in srgb, var(--white) 55%, transparent);
+}
+
+.site-footer__note {
+  margin-top: 0.65rem;
+  color: var(--sun-gold);
+  font-size: 0.9rem;
+}
+
+.site-footer__copy {
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid color-mix(in srgb, var(--white) 12%, transparent);
+  font-size: 0.85rem;
+  opacity: 0.75;
+}

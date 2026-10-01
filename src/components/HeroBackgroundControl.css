@@ -1,0 +1,40 @@
+.bg-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.bg-control__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0.45rem 0.95rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--white) 35%, transparent);
+  background: color-mix(in srgb, #000 35%, transparent);
+  color: var(--white);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+
+.bg-control__btn:hover {
+  border-color: var(--sun-gold);
+  color: var(--sun-gold);
+}
+
+.bg-control__btn--ghost {
+  background: transparent;
+}
+
+.bg-control__error {
+  width: 100%;
+  margin: 0;
+  font-size: 0.85rem;
+  color: #ffd0d0;
+}

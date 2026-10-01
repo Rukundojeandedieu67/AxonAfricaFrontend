@@ -1,0 +1,138 @@
+.stage-path {
+  position: relative;
+  color: var(--sun-gold);
+  padding: 0.5rem 0 0.25rem;
+}
+
+.stage-path__line {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 14px;
+  width: 84%;
+  height: 24px;
+  opacity: 0.55;
+}
+
+.stage-path--animated .stage-path__line path,
+.stage-path--drawn .stage-path__line path {
+  stroke-dasharray: 320;
+  stroke-dashoffset: 320;
+  animation: draw-path 1.4s ease forwards 0.35s;
+}
+
+.stage-path--view .stage-path__line path {
+  stroke-dasharray: 320;
+  stroke-dashoffset: 320;
+}
+
+.stage-path--view.stage-path--drawn .stage-path__line path {
+  animation: draw-path 1.4s ease forwards;
+}
+
+.stage-path--animated .stage-path__item,
+.stage-path--drawn .stage-path__item {
+  animation: stage-pop 0.55s ease both;
+}
+
+@keyframes stage-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-path--animated .stage-path__line path,
+  .stage-path--drawn .stage-path__line path,
+  .stage-path--view.stage-path--drawn .stage-path__line path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+
+  .stage-path--animated .stage-path__item,
+  .stage-path--drawn .stage-path__item {
+    animation: none;
+  }
+}
+
+@keyframes draw-path {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.stage-path__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.stage-path__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.35rem;
+}
+
+.stage-path__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--field-green) 65%, transparent);
+}
+
+.stage-path__item--seed {
+  color: var(--sun-gold);
+}
+.stage-path__item--plant {
+  color: #7dffa0;
+}
+.stage-path__item--canopy {
+  color: #c8ffd4;
+}
+
+.stage-path__label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--white);
+}
+
+.stage-path__sub {
+  font-size: 0.8rem;
+  color: color-mix(in srgb, var(--white) 75%, transparent);
+}
+
+.stage-path--compact .stage-path__label {
+  color: var(--deep-green);
+}
+
+.stage-path--compact {
+  color: var(--leaf-green);
+}
+
+.stage-path--compact .stage-path__dot {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--off-white) 90%, var(--leaf-green));
+}
+
+.stage-path--compact .stage-path__item--seed {
+  color: var(--amber);
+}
+.stage-path--compact .stage-path__item--plant {
+  color: var(--leaf-green);
+}
+.stage-path--compact .stage-path__item--canopy {
+  color: var(--field-green);
+}

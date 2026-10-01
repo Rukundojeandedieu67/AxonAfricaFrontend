@@ -1,0 +1,110 @@
+.media-frame {
+  margin: 0;
+  width: 100%;
+}
+
+.media-frame__surface {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: linear-gradient(145deg, #0a3d09, #032802);
+  aspect-ratio: 16 / 9;
+  box-shadow: var(--shadow-soft);
+}
+
+.media-frame--4x3 .media-frame__surface {
+  aspect-ratio: 4 / 3;
+}
+.media-frame--1x1 .media-frame__surface {
+  aspect-ratio: 1 / 1;
+}
+.media-frame--3x4 .media-frame__surface {
+  aspect-ratio: 3 / 4;
+}
+
+.media-frame__iframe {
+  border: 0;
+  filter: none !important;
+}
+
+.media-frame__media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.media-frame__surface--tint .media-frame__media {
+  filter: sepia(0.12) saturate(1.08) hue-rotate(55deg);
+}
+
+.media-frame__play {
+  position: absolute;
+  inset: auto auto 1rem 1rem;
+  width: 52px;
+  height: 52px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffd24a, var(--sun-gold));
+  color: var(--deep-green);
+  font-size: 0.85rem;
+  cursor: pointer;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s ease;
+  z-index: 2;
+}
+
+.media-frame__play:hover {
+  transform: scale(1.06);
+}
+
+.media-frame__play.is-playing {
+  background: color-mix(in srgb, #000 55%, transparent);
+  color: var(--white);
+  backdrop-filter: blur(6px);
+}
+
+.media-frame__placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 0.4rem;
+  text-align: center;
+  color: color-mix(in srgb, var(--white) 80%, transparent);
+  font-weight: 600;
+  font-size: 0.92rem;
+  background:
+    radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--sun-gold) 18%, transparent), transparent 45%),
+    linear-gradient(145deg, #0a4a08, #032802);
+}
+
+.media-frame__placeholder-icon {
+  font-size: 1.6rem;
+  color: var(--sun-gold);
+  animation: media-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes media-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+.media-frame__caption {
+  margin-top: 0.65rem;
+  font-size: 0.9rem;
+  color: color-mix(in srgb, var(--ink) 72%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .media-frame__placeholder-icon {
+    animation: none;
+  }
+}
