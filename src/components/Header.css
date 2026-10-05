@@ -112,3 +112,28 @@
     display: none !important;
   }
 }
+
+@media (max-width: 380px) {
+  .site-header__inner {
+    gap: 0.4rem;
+  }
+
+  .site-header__actions {
+    gap: 0.3rem;
+  }
+
+  .site-header__theme,
+  .site-header__menu {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+
+  .site-header__apply {
+    min-height: 40px;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+}
