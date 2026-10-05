@@ -116,7 +116,7 @@
 }
 
 .stage-path--compact .stage-path__label {
-  color: var(--deep-green);
+  color: var(--heading-color);
 }
 
 .stage-path--compact {

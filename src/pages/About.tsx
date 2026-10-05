@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, unwrapList, type TeamMember } from '../api/client'
+import { HeroBackgroundSlides } from '../components/HeroBackgroundSlides'
 import { MediaFrame } from '../components/MediaFrame'
 import { Reveal } from '../components/Reveal'
 import { siteMedia } from '../data/siteMedia'
@@ -35,6 +36,7 @@ export function AboutPage() {
   return (
     <>
       <section className="page-hero">
+        <HeroBackgroundSlides />
         <div className="container">
           <p className="eyebrow eyebrow--on-dark">About &amp; Team</p>
           <h1>A youth-led organization with a serious purpose.</h1>
@@ -60,14 +62,14 @@ export function AboutPage() {
             <Reveal>
               <div className="grid-3" style={{ gridTemplateColumns: '1fr' }}>
                 <article className="card card--soft">
-                  <h3 style={{ color: 'var(--deep-green)' }}>Mission</h3>
+                  <h3 style={{ color: 'var(--heading-color)' }}>Mission</h3>
                   <p style={{ margin: 0 }}>
                     Empower the next generation of African health leaders to turn digitally-native
                     ideas into solutions tested where they matter.
                   </p>
                 </article>
                 <article className="card card--soft">
-                  <h3 style={{ color: 'var(--deep-green)' }}>Vision</h3>
+                  <h3 style={{ color: 'var(--heading-color)' }}>Vision</h3>
                   <p style={{ margin: 0 }}>
                     A continent where youth-led health innovation is the default path from classroom
                     to impact — not the exception.
@@ -104,7 +106,7 @@ export function AboutPage() {
                     <MediaFrame src={member.photo} alt={member.full_name} aspect="4/3" />
                   ) : null}
                   <div style={{ padding: member.photo ? '1.15rem 1.25rem 1.35rem' : undefined }}>
-                    <h3 style={{ color: 'var(--deep-green)', fontSize: '1.1rem', marginBottom: 4 }}>
+                    <h3 style={{ color: 'var(--heading-color)', fontSize: '1.1rem', marginBottom: 4 }}>
                       {member.full_name}
                     </h3>
                     <p className="eyebrow eyebrow--leaf" style={{ marginBottom: '0.5rem' }}>

@@ -265,7 +265,7 @@
 }
 
 .media-story {
-  background: var(--white);
+  background: var(--surface);
 }
 
 .media-story__grid {
@@ -288,7 +288,7 @@
 .problem__cards h3,
 .pathway__cards h3 {
   font-size: 1.15rem;
-  color: var(--deep-green);
+  color: var(--heading-color);
 }
 
 .pathway {
@@ -305,7 +305,7 @@
 }
 
 .program-spotlight {
-  background: var(--white);
+  background: var(--surface);
   padding-bottom: 5rem;
 }
 
@@ -348,11 +348,11 @@
   border-radius: var(--radius-card);
   padding: 2rem;
   color: var(--ink);
-  border: 1px solid color-mix(in srgb, var(--deep-green) 8%, transparent);
+  border: 1px solid var(--border-soft);
 }
 
 .program-spotlight__side h3 {
-  color: var(--deep-green);
+  color: var(--heading-color);
   font-size: 1.25rem;
 }
 
@@ -397,7 +397,7 @@
 
 .partners__list span {
   font-weight: 700;
-  color: var(--deep-green);
+  color: var(--heading-color);
 }
 
 .get-involved-cta {

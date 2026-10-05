@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { ApiError, api, type ApplicationPayload, type ApplicationWindow } from '../api/client'
+import { HeroBackgroundSlides } from '../components/HeroBackgroundSlides'
 
 const DRAFT_KEY = 'axonafrica-apply-draft'
 
@@ -190,6 +191,7 @@ export function ApplyPage() {
   return (
     <>
       <section className="page-hero">
+        <HeroBackgroundSlides />
         <div className="container">
           <p className="eyebrow eyebrow--on-dark">Apply</p>
           <h1>Tell us about the idea that will not leave you alone.</h1>
@@ -205,12 +207,12 @@ export function ApplyPage() {
         <div className="container" style={{ maxWidth: 640 }}>
           {status === 'done' ? (
             <div className="card card--soft">
-              <h2 style={{ color: 'var(--deep-green)' }}>Application received</h2>
+              <h2 style={{ color: 'var(--heading-color)' }}>Application received</h2>
               <p className="form-ok">{message}</p>
             </div>
           ) : windowError ? (
             <div className="card card--soft" role="alert">
-              <h2 style={{ color: 'var(--deep-green)' }}>Application status unavailable</h2>
+              <h2 style={{ color: 'var(--heading-color)' }}>Application status unavailable</h2>
               <p className="form-error">{windowError}</p>
             </div>
           ) : !applicationWindow ? (
@@ -219,7 +221,7 @@ export function ApplyPage() {
             </div>
           ) : !windowIsOpen ? (
             <div className="card card--soft" role="status">
-              <h2 style={{ color: 'var(--deep-green)' }}>
+              <h2 style={{ color: 'var(--heading-color)' }}>
                 {applicationStatus === 'upcoming'
                   ? 'Applications are not open yet'
                   : 'Applications are currently closed'}
@@ -241,7 +243,7 @@ export function ApplyPage() {
           ) : (
             <>
               <div className="card card--soft" style={{ marginBottom: '1rem' }} role="status">
-                <h2 style={{ color: 'var(--deep-green)' }}>Applications are open</h2>
+                <h2 style={{ color: 'var(--heading-color)' }}>Applications are open</h2>
                 {applicationWindow.opens_at && (
                   <p>Opened: <strong>{formatDate(applicationWindow.opens_at)}</strong></p>
                 )}
@@ -261,7 +263,7 @@ export function ApplyPage() {
                     gap: '1rem',
                     marginBottom: '0.5rem',
                     fontWeight: 600,
-                    color: 'var(--deep-green)',
+                    color: 'var(--heading-color)',
                   }}
                 >
                   <span>

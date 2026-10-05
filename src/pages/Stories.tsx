@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api, unwrapList, type NewsPost } from '../api/client'
+import { HeroBackgroundSlides } from '../components/HeroBackgroundSlides'
 import { MediaFrame } from '../components/MediaFrame'
 import { Reveal } from '../components/Reveal'
 import { siteMedia } from '../data/siteMedia'
@@ -33,6 +34,7 @@ export function StoriesPage() {
   return (
     <>
       <section className="page-hero">
+        <HeroBackgroundSlides />
         <div className="container">
           <p className="eyebrow eyebrow--on-dark">Stories &amp; Contact</p>
           <h1>Updates from the work, and a direct line to the team.</h1>
@@ -98,7 +100,7 @@ export function StoriesPage() {
                       placeholderLabel={post.title}
                     />
                     <div style={{ padding: '1.15rem 1.25rem 1.35rem' }}>
-                      <h3 style={{ color: 'var(--deep-green)', fontSize: '1.15rem' }}>
+                      <h3 style={{ color: 'var(--heading-color)', fontSize: '1.15rem' }}>
                         {post.title}
                       </h3>
                       <p style={{ margin: 0 }}>{post.excerpt}</p>

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { HeroBackgroundSlides } from '../components/HeroBackgroundSlides'
 import { MediaFrame } from '../components/MediaFrame'
 import { Reveal } from '../components/Reveal'
 import { StagePath } from '../components/StagePath'
@@ -27,6 +28,7 @@ export function ProgramPage() {
   return (
     <>
       <section className="page-hero">
+        <HeroBackgroundSlides />
         <div className="container">
           <p className="eyebrow eyebrow--on-dark">Digital Health Leaders Program</p>
           <h1>Where bold health ideas become deployed solutions.</h1>
@@ -122,7 +124,7 @@ export function ProgramPage() {
             <div style={{ display: 'grid', gap: '1rem' }}>
               {faqs.map((item) => (
                 <article key={item.q} className="card card--soft">
-                  <h3 style={{ fontSize: '1.05rem', color: 'var(--deep-green)' }}>{item.q}</h3>
+                  <h3 style={{ fontSize: '1.05rem', color: 'var(--heading-color)' }}>{item.q}</h3>
                   <p style={{ margin: 0 }}>{item.a}</p>
                 </article>
               ))}

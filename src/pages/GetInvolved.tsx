@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiError, api } from '../api/client'
+import { HeroBackgroundSlides } from '../components/HeroBackgroundSlides'
 import { Reveal } from '../components/Reveal'
 
 type Mode = 'fund' | 'partner' | 'volunteer'
@@ -73,6 +74,7 @@ export function GetInvolvedPage() {
   return (
     <>
       <section className="page-hero">
+        <HeroBackgroundSlides />
         <div className="container">
           <p className="eyebrow eyebrow--on-dark">Get Involved</p>
           <h1>Find your place in the work.</h1>
@@ -84,7 +86,7 @@ export function GetInvolvedPage() {
         <div className="container grid-3">
           <Reveal>
             <article className="card" id="fund">
-              <h3 style={{ color: 'var(--deep-green)' }}>Funders</h3>
+              <h3 style={{ color: 'var(--heading-color)' }}>Funders</h3>
               <p>
                 Fund a cohort. Back the seed capital and mentorship that carries innovators through
                 the program.
@@ -96,7 +98,7 @@ export function GetInvolvedPage() {
           </Reveal>
           <Reveal>
             <article className="card" id="partner">
-              <h3 style={{ color: 'var(--deep-green)' }}>Institutions</h3>
+              <h3 style={{ color: 'var(--heading-color)' }}>Institutions</h3>
               <p>
                 Open a lab, a clinical validation site, or a placement so a finished solution can be
                 tested where it matters.
@@ -108,7 +110,7 @@ export function GetInvolvedPage() {
           </Reveal>
           <Reveal>
             <article className="card">
-              <h3 style={{ color: 'var(--deep-green)' }}>Innovators</h3>
+              <h3 style={{ color: 'var(--heading-color)' }}>Innovators</h3>
               <p>Bring your idea and start at Seed.</p>
               <Link to="/apply" className="btn btn--gold">
                 Apply to Cohort 1

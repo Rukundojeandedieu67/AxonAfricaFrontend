@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, unwrapList, type Innovator } from '../api/client'
+import { HeroBackgroundSlides } from '../components/HeroBackgroundSlides'
 import { MediaFrame } from '../components/MediaFrame'
 import { Reveal } from '../components/Reveal'
 import { siteMedia } from '../data/siteMedia'
@@ -29,6 +30,7 @@ export function InnovatorsPage() {
   return (
     <>
       <section className="page-hero">
+        <HeroBackgroundSlides />
         <div className="container">
           <p className="eyebrow eyebrow--on-dark">Innovators</p>
           <h1>The people building health in Africa.</h1>
@@ -48,7 +50,7 @@ export function InnovatorsPage() {
             <div className="media-story__grid">
               <Reveal>
                 <div className="card card--soft">
-                  <h2 style={{ color: 'var(--deep-green)' }}>Meet Cohort 1</h2>
+                  <h2 style={{ color: 'var(--heading-color)' }}>Meet Cohort 1</h2>
                   <p>
                     The gallery grows every cycle. Until innovator profiles are published, the main
                     action is to apply.
@@ -80,7 +82,7 @@ export function InnovatorsPage() {
                     />
                     <div style={{ padding: '1.15rem 1.25rem 1.4rem' }}>
                       <p className="eyebrow eyebrow--leaf">{person.current_stage || 'Innovator'}</p>
-                      <h3 style={{ color: 'var(--deep-green)', fontSize: '1.15rem' }}>
+                      <h3 style={{ color: 'var(--heading-color)', fontSize: '1.15rem' }}>
                         {person.full_name}
                       </h3>
                       <p style={{ fontWeight: 600, marginBottom: '0.35rem' }}>
