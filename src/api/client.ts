@@ -1,4 +1,6 @@
-const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') || ''
+const API_URL =
+  (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ||
+  'https://axonafrica.onrender.com'
 
 export class ApiError extends Error {
   status: number
@@ -42,20 +44,28 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T
 }
 
-export type ImpactStats = {
-  scholars_reached?: number
-  cohorts_run?: number
-  institutions_partnered?: number
-  innovators_active?: number
-  [key: string]: unknown
+export type ImpactStat = {
+  key: string
+  label: string
+  value: number
+}
+
+export type HeroSlide = {
+  id: number
+  image: string
+  alt_text?: string
+  order: number
 }
 
 export type Partner = {
   id: number
   name: string
+  type: string
   logo?: string | null
   website?: string
-  is_public?: boolean
+  description?: string
+  country?: string
+  is_featured?: boolean
 }
 
 export type TeamMember = {
@@ -102,28 +112,55 @@ export type ApplicationPayload = {
   idea_summary: string
 }
 
+type FundCohortPayload = {
+  organization: string
+  contact_name: string
+  email: string
+  amount_range: string
+  message: string
+}
+
+type PartnerRequestPayload = {
+  institution_name: string
+  institution_type: string
+  contact_name: string
+  email: string
+  offer: string
+  message: string
+}
+
+type VolunteerRequestPayload = {
+  kind: 'mentor' | 'judge' | 'ambassador' | 'exhibitor'
+  full_name: string
+  email: string
+  organization: string
+  expertise: string
+  message: string
+}
+
 export const api = {
-  impactStats: () => request<ImpactStats>('/api/v1/impact/stats/'),
+  impactStats: () => request<ImpactStat[]>('/api/v1/impact/stats/'),
+  heroSlides: () => request<HeroSlide[]>('/api/v1/hero-slides/'),
   partners: () => request<Partner[] | { results: Partner[] }>('/api/v1/partners/'),
   team: () => request<TeamMember[] | { results: TeamMember[] }>('/api/v1/team/'),
   news: () => request<NewsPost[] | { results: NewsPost[] }>('/api/v1/news/'),
   innovators: () => request<Innovator[] | { results: Innovator[] }>('/api/v1/innovators/'),
   submitApplication: (payload: ApplicationPayload) =>
-    request<{ id: number }>('/api/v1/applications/', {
+    request<{ message: string; id: number }>('/api/v1/applications/', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  fundCohort: (payload: Record<string, string>) =>
+  fundCohort: (payload: FundCohortPayload) =>
     request('/api/v1/involvement/fund-cohort/', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  partnerRequest: (payload: Record<string, string>) =>
+  partnerRequest: (payload: PartnerRequestPayload) =>
     request('/api/v1/involvement/partner/', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  volunteerRequest: (payload: Record<string, string>) =>
+  volunteerRequest: (payload: VolunteerRequestPayload) =>
     request('/api/v1/involvement/volunteer/', {
       method: 'POST',
       body: JSON.stringify(payload),

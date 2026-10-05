@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import './Logo.css'
 
 type Props = {
-  /** Footer / dark surfaces: logo sits on brand black plate */
+  /** Footer / dark surfaces: use a flush white plate */
   onDark?: boolean
   size?: 'sm' | 'md' | 'lg'
 }

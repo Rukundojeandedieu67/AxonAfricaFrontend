@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, unwrapList, type Partner } from '../api/client'
+import { api, unwrapList, type HeroSlide, type Partner } from '../api/client'
 import { AnimatedStat } from '../components/AnimatedStat'
 import { HeroBackgroundControl } from '../components/HeroBackgroundControl'
 import { MediaFrame } from '../components/MediaFrame'
@@ -60,12 +60,14 @@ const seedModules = [
 
 export function HomePage() {
   const [partners, setPartners] = useState<Partner[]>([])
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([])
+  const [activeSlide, setActiveSlide] = useState(0)
   const [heroBg, setHeroBg] = useState<string | null>(() => getHeroBackground())
   const [stats, setStats] = useState({
-    stages: '3',
-    cohort: '15–25',
-    youth: '100%',
-    loop: '6',
+    scholarsReached: '—',
+    cohortsRun: '—',
+    institutionsPartnered: '—',
+    applicationsReceived: '—',
   })
 
   useEffect(() => {
@@ -81,14 +83,25 @@ export function HomePage() {
     let alive = true
     ;(async () => {
       try {
-        const [partnerData, impact] = await Promise.all([
+        const [partnerData, impact, slideData] = await Promise.all([
           api.partners().catch(() => []),
           api.impactStats().catch(() => null),
+          api.heroSlides().catch((): HeroSlide[] => []),
         ])
         if (!alive) return
         setPartners(unwrapList(partnerData).filter((p) => p.logo || p.name))
-        if (impact?.innovators_active) {
-          setStats((s) => ({ ...s, cohort: String(impact.innovators_active) }))
+        setHeroSlides(unwrapList(slideData).filter((slide) => slide.image))
+        if (impact) {
+          const valueFor = (key: string) => {
+            const value = impact.find((stat) => stat.key === key)?.value
+            return value === undefined ? '—' : String(value)
+          }
+          setStats({
+            scholarsReached: valueFor('scholars_reached'),
+            cohortsRun: valueFor('cohorts_run'),
+            institutionsPartnered: valueFor('institutions_partnered'),
+            applicationsReceived: valueFor('applications_received'),
+          })
         }
       } catch {
         /* offline / empty API is fine for launch */
@@ -99,12 +112,40 @@ export function HomePage() {
     }
   }, [])
 
+  useEffect(() => {
+    if (heroSlides.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return
+    }
+    const timer = window.setInterval(() => {
+      setActiveSlide((index) => (index + 1) % heroSlides.length)
+    }, 6000)
+    return () => window.clearInterval(timer)
+  }, [heroSlides.length])
+
   return (
     <div className="home">
       <section
-        className={`hero ${heroBg ? 'hero--photo' : ''}`}
-        style={heroBg ? { ['--hero-photo' as string]: `url(${heroBg})` } : undefined}
+        className={`hero ${heroSlides.length ? 'hero--slides' : heroBg ? 'hero--photo' : ''}`}
+        style={
+          heroBg && !heroSlides.length
+            ? { ['--hero-photo' as string]: `url(${heroBg})` }
+            : undefined
+        }
       >
+        {heroSlides.length > 0 && (
+          <div className="hero__slides" aria-hidden="true">
+            {heroSlides.map((slide, index) => (
+              <img
+                key={slide.id}
+                className={`hero__slide ${index === activeSlide ? 'is-active' : ''}`}
+                src={slide.image}
+                alt=""
+                loading={index === 0 ? 'eager' : 'lazy'}
+                fetchPriority={index === 0 ? 'high' : 'auto'}
+              />
+            ))}
+          </div>
+        )}
         <div className="hero__scrim" aria-hidden />
         <div className="hero__orbs" aria-hidden>
           <span />
@@ -120,13 +161,13 @@ export function HomePage() {
               width={280}
               height={80}
             />
-            <p className="eyebrow eyebrow--on-dark">The digital age of African health innovation</p>
             <h1>Empowering the next generation of health leaders in the digital age.</h1>
             <p>
               Health systems that can&apos;t move at the speed of a real crisis will always fall
               behind. AxonAfrica exists to make sure the next generation of African health leaders
               doesn&apos;t wait for permission — we carry bold, digitally-native health ideas from a
-              young innovator&apos;s mind to a solution tested inside a real institution.
+              young innovator&apos;s mind to a solution tested and used into the communities that need
+              them the most.
             </p>
             <div className="hero__actions">
               <Link to="/apply" className="btn btn--gold">
@@ -257,10 +298,10 @@ export function HomePage() {
 
       <section className="impact-strip section--tight">
         <div className="container grid-4 impact-strip__grid">
-          <AnimatedStat value={stats.stages} label="stages from idea to impact" />
-          <AnimatedStat value={stats.cohort} label="innovators in every cohort" />
-          <AnimatedStat value={stats.youth} label="youth-led from day one" />
-          <AnimatedStat value={stats.loop} label="stages, one continuous loop" />
+          <AnimatedStat value={stats.scholarsReached} label="scholars reached" />
+          <AnimatedStat value={stats.cohortsRun} label="cohorts run" />
+          <AnimatedStat value={stats.institutionsPartnered} label="institutions partnered" />
+          <AnimatedStat value={stats.applicationsReceived} label="applications received" />
         </div>
       </section>
 

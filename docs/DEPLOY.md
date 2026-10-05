@@ -7,13 +7,13 @@ Repo: https://github.com/Rukundojeandedieu67/AxonAfricaFrontend
 You need the live Django URL from Render (example):
 
 ```text
-https://axonafrica-api.onrender.com
+https://axonafrica.onrender.com
 ```
 
 Set as build env (no trailing slash):
 
 ```env
-VITE_API_URL=https://YOUR-API.onrender.com
+VITE_API_URL=https://axonafrica.onrender.com
 ```
 
 ## 2. Allow the frontend origin on the API

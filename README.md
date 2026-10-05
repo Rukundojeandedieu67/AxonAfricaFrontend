@@ -1,4 +1,4 @@
-﻿# AxonAfricaFrontend
+# AxonAfricaFrontend
 
 React + Vite website for **AxonAfrica** (Phase 1 from the design brief).
 
@@ -28,7 +28,7 @@ npm run dev
 Open http://127.0.0.1:5173
 
 ```env
-VITE_API_URL=http://127.0.0.1:8000
+VITE_API_URL=https://axonafrica.onrender.com
 ```
 
 ## Build
@@ -41,5 +41,6 @@ npm run preview
 ## API
 
 Backend repo: https://github.com/Rukundojeandedieu67/AxonAfrica  
+API reference: https://axonafrica.onrender.com/api/docs/#/
 
 Set production `VITE_API_URL` to your Render API host and add this site’s origin to backend `CORS_ALLOWED_ORIGINS`.

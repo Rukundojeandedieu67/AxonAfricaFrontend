@@ -5,12 +5,11 @@
   flex-shrink: 0;
 }
 
-/* Real mark has a black field — keep it on a matched plate so gold/green stay crisp on light UI */
 .logo-frame {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #000;
+  background: #fff;
   border-radius: 14px;
   padding: 0.35rem 0.55rem;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
@@ -19,7 +18,7 @@
 
 .logo-frame--flush {
   box-shadow: none;
-  border: 1px solid color-mix(in srgb, var(--sun-gold) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--deep-green) 14%, transparent);
 }
 
 .logo-img {
