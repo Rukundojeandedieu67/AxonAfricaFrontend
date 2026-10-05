@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { ApiError, api, type ApplicationPayload } from '../api/client'
+import { ApiError, api, type ApplicationPayload, type ApplicationWindow } from '../api/client'
 
 const DRAFT_KEY = 'axonafrica-apply-draft'
 
@@ -31,11 +31,50 @@ const empty: Draft = {
 
 const steps = ['About you', 'Your idea', 'Your team', 'Commitment'] as const
 
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'long',
+    timeStyle: 'short',
+  }).format(new Date(value))
+}
+
+function formatCountdown(milliseconds: number) {
+  const seconds = Math.max(0, Math.floor(milliseconds / 1000))
+  const days = Math.floor(seconds / 86400)
+  const hours = Math.floor((seconds % 86400) / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const remainder = seconds % 60
+  return `${days}d ${hours}h ${minutes}m ${remainder}s`
+}
+
 export function ApplyPage() {
   const [step, setStep] = useState(0)
   const [draft, setDraft] = useState<Draft>(empty)
   const [status, setStatus] = useState<'idle' | 'saving' | 'done' | 'error'>('idle')
   const [message, setMessage] = useState('')
+  const [applicationWindow, setApplicationWindow] = useState<ApplicationWindow | null>(null)
+  const [windowError, setWindowError] = useState('')
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    let alive = true
+    api.applicationWindow()
+      .then((window) => {
+        if (alive) setApplicationWindow(window)
+      })
+      .catch(() => {
+        if (alive) setWindowError('We could not check the application window. Please try again later.')
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!applicationWindow?.opens_at && !applicationWindow?.deadline) return
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [applicationWindow?.opens_at, applicationWindow?.deadline])
 
   useEffect(() => {
     try {
@@ -54,6 +93,19 @@ export function ApplyPage() {
   }, [draft])
 
   const progress = useMemo(() => ((step + 1) / steps.length) * 100, [step])
+  const opensAt = applicationWindow?.opens_at
+  const deadline = applicationWindow?.deadline
+  const remainingMs = deadline
+    ? new Date(deadline).getTime() - now
+    : 0
+  const applicationStatus = !opensAt || !deadline
+    ? 'closed'
+    : now < new Date(opensAt).getTime()
+      ? 'upcoming'
+      : remainingMs > 0
+        ? 'open'
+        : 'closed'
+  const windowIsOpen = applicationStatus === 'open'
 
   function update<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((d) => ({ ...d, [key]: value }))
@@ -127,7 +179,9 @@ export function ApplyPage() {
       setStatus('error')
       setMessage(
         err instanceof ApiError
-          ? 'We could not submit right now. Check your details and try again.'
+          ? err.status === 403
+            ? err.message
+            : 'We could not submit right now. Check your details and try again.'
           : 'Network error. Your draft is saved on this device — try again when you are online.',
       )
     }
@@ -139,7 +193,11 @@ export function ApplyPage() {
         <div className="container">
           <p className="eyebrow eyebrow--on-dark">Apply</p>
           <h1>Tell us about the idea that will not leave you alone.</h1>
-          <p>A calm four-step form. Your progress saves automatically on this device.</p>
+          <p>
+            {windowIsOpen
+              ? 'Applications are open now. Your progress saves automatically on this device.'
+              : 'Check the current application window and deadline below.'}
+          </p>
         </div>
       </section>
 
@@ -150,8 +208,51 @@ export function ApplyPage() {
               <h2 style={{ color: 'var(--deep-green)' }}>Application received</h2>
               <p className="form-ok">{message}</p>
             </div>
+          ) : windowError ? (
+            <div className="card card--soft" role="alert">
+              <h2 style={{ color: 'var(--deep-green)' }}>Application status unavailable</h2>
+              <p className="form-error">{windowError}</p>
+            </div>
+          ) : !applicationWindow ? (
+            <div className="card card--soft" role="status">
+              <p>Checking the application window…</p>
+            </div>
+          ) : !windowIsOpen ? (
+            <div className="card card--soft" role="status">
+              <h2 style={{ color: 'var(--deep-green)' }}>
+                {applicationStatus === 'upcoming'
+                  ? 'Applications are not open yet'
+                  : 'Applications are currently closed'}
+              </h2>
+              {applicationStatus === 'upcoming' && applicationWindow.opens_at ? (
+                <p>
+                  Applications open on <strong>{formatDate(applicationWindow.opens_at)}</strong>.
+                </p>
+              ) : applicationWindow.deadline &&
+                remainingMs <= 0 &&
+                applicationWindow.opens_at ? (
+                <p>
+                  This application window closed on <strong>{formatDate(applicationWindow.deadline)}</strong>.
+                </p>
+              ) : (
+                <p>There is no active application window. Please check back for the next cohort.</p>
+              )}
+            </div>
           ) : (
-            <form className="card" onSubmit={onSubmit}>
+            <>
+              <div className="card card--soft" style={{ marginBottom: '1rem' }} role="status">
+                <h2 style={{ color: 'var(--deep-green)' }}>Applications are open</h2>
+                {applicationWindow.opens_at && (
+                  <p>Opened: <strong>{formatDate(applicationWindow.opens_at)}</strong></p>
+                )}
+                {applicationWindow.deadline && (
+                  <p>Deadline: <strong>{formatDate(applicationWindow.deadline)}</strong></p>
+                )}
+                <p>
+                  Time remaining: <strong>{formatCountdown(remainingMs)}</strong>
+                </p>
+              </div>
+              <form className="card" onSubmit={onSubmit}>
               <div style={{ marginBottom: '1.25rem' }}>
                 <div
                   style={{
@@ -370,7 +471,8 @@ export function ApplyPage() {
                     : 'Continue'}
                 </button>
               </div>
-            </form>
+              </form>
+            </>
           )}
         </div>
       </section>

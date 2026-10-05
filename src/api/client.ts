@@ -112,6 +112,13 @@ export type ApplicationPayload = {
   idea_summary: string
 }
 
+export type ApplicationWindow = {
+  status: 'upcoming' | 'open' | 'closed'
+  is_open: boolean
+  opens_at: string | null
+  deadline: string | null
+}
+
 type FundCohortPayload = {
   organization: string
   contact_name: string
@@ -141,6 +148,7 @@ type VolunteerRequestPayload = {
 export const api = {
   impactStats: () => request<ImpactStat[]>('/api/v1/impact/stats/'),
   heroSlides: () => request<HeroSlide[]>('/api/v1/hero-slides/'),
+  applicationWindow: () => request<ApplicationWindow>('/api/v1/application-window/'),
   partners: () => request<Partner[] | { results: Partner[] }>('/api/v1/partners/'),
   team: () => request<TeamMember[] | { results: TeamMember[] }>('/api/v1/team/'),
   news: () => request<NewsPost[] | { results: NewsPost[] }>('/api/v1/news/'),
