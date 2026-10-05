@@ -4,7 +4,7 @@ import { HeroBackgroundSlides } from '../components/HeroBackgroundSlides'
 
 const DRAFT_KEY = 'axonafrica-apply-draft'
 
-type Draft = ApplicationPayload & {
+type Draft = Omit<ApplicationPayload, 'cv' | 'pitch_deck'> & {
   skillsHave: string
   skillsNeed: string
   motivation: string
@@ -51,6 +51,8 @@ function formatCountdown(milliseconds: number) {
 export function ApplyPage() {
   const [step, setStep] = useState(0)
   const [draft, setDraft] = useState<Draft>(empty)
+  const [cv, setCv] = useState<File | null>(null)
+  const [pitchDeck, setPitchDeck] = useState<File | null>(null)
   const [status, setStatus] = useState<'idle' | 'saving' | 'done' | 'error'>('idle')
   const [message, setMessage] = useState('')
   const [applicationWindow, setApplicationWindow] = useState<ApplicationWindow | null>(null)
@@ -87,11 +89,15 @@ export function ApplyPage() {
   }, [])
 
   useEffect(() => {
+    if (status === 'done') {
+      localStorage.removeItem(DRAFT_KEY)
+      return
+    }
     const id = window.setTimeout(() => {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
     }, 400)
     return () => window.clearTimeout(id)
-  }, [draft])
+  }, [draft, status])
 
   const progress = useMemo(() => ((step + 1) / steps.length) * 100, [step])
   const opensAt = applicationWindow?.opens_at
@@ -170,8 +176,13 @@ export function ApplyPage() {
         idea_title: draft.idea_title,
         problem_statement: draft.problem_statement,
         idea_summary,
+        ...(cv ? { cv } : {}),
+        ...(pitchDeck ? { pitch_deck: pitchDeck } : {}),
       })
       localStorage.removeItem(DRAFT_KEY)
+      setDraft(empty)
+      setCv(null)
+      setPitchDeck(null)
       setStatus('done')
       setMessage(
         'Thank you. Your application is in. We will email you with the next step.',
@@ -180,9 +191,7 @@ export function ApplyPage() {
       setStatus('error')
       setMessage(
         err instanceof ApiError
-          ? err.status === 403
-            ? err.message
-            : 'We could not submit right now. Check your details and try again.'
+          ? err.message
           : 'Network error. Your draft is saved on this device — try again when you are online.',
       )
     }
@@ -403,6 +412,22 @@ export function ApplyPage() {
                       <textarea
                         value={draft.skillsNeed}
                         onChange={(e) => update('skillsNeed', e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      CV (PDF, optional)
+                      <input
+                        type="file"
+                        accept="application/pdf,.pdf"
+                        onChange={(event) => setCv(event.target.files?.[0] ?? null)}
+                      />
+                    </label>
+                    <label>
+                      Pitch deck (PDF, optional)
+                      <input
+                        type="file"
+                        accept="application/pdf,.pdf"
+                        onChange={(event) => setPitchDeck(event.target.files?.[0] ?? null)}
                       />
                     </label>
                   </>

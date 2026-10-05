@@ -2,10 +2,13 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { AboutPage } from './pages/About'
 import { ApplyPage } from './pages/Apply'
+import { AccountPage } from './pages/Account'
+import { ExplorePage } from './pages/Explore'
 import { GetInvolvedPage } from './pages/GetInvolved'
 import { HomePage } from './pages/Home'
 import { InnovatorsPage } from './pages/Innovators'
 import { ProgramPage } from './pages/Program'
+import { StaffApplicationsPage } from './pages/StaffApplications'
 import { StoriesPage } from './pages/Stories'
 
 export default function App() {
@@ -20,6 +23,9 @@ export default function App() {
           <Route path="about" element={<AboutPage />} />
           <Route path="get-involved" element={<GetInvolvedPage />} />
           <Route path="stories" element={<StoriesPage />} />
+          <Route path="explore" element={<ExplorePage />} />
+          <Route path="account" element={<AccountPage />} />
+          <Route path="staff/applications" element={<StaffApplicationsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

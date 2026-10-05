@@ -8,6 +8,8 @@ const links = [
   { to: '/program', label: 'Program' },
   { to: '/innovators', label: 'Innovators' },
   { to: '/get-involved', label: 'Get Involved' },
+  { to: '/explore', label: 'Explore' },
+  { to: '/account', label: 'Account' },
 ]
 
 type Theme = 'day' | 'night'

@@ -5,17 +5,38 @@ import { HeroBackgroundSlides } from '../components/HeroBackgroundSlides'
 import { Reveal } from '../components/Reveal'
 
 type Mode = 'fund' | 'partner' | 'volunteer'
+type VolunteerKind = 'mentor' | 'judge' | 'ambassador' | 'exhibitor'
 
 export function GetInvolvedPage() {
   const [mode, setMode] = useState<Mode>('fund')
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    contact_name: string
+    full_name: string
+    email: string
+    organization: string
+    institution_name: string
+    institution_type: string
+    offer: string
+    amount_range: string
+    phone: string
+    kind: VolunteerKind
+    faculty: string
+    message: string
+    expertise: string
+  }>({
     contact_name: '',
     full_name: '',
     email: '',
     organization: '',
     institution_name: '',
+    institution_type: '',
+    offer: 'other',
+    amount_range: '',
+    phone: '',
+    kind: 'mentor',
+    faculty: '',
     message: '',
     expertise: '',
   })
@@ -27,28 +48,31 @@ export function GetInvolvedPage() {
     try {
       if (mode === 'fund') {
         await api.fundCohort({
-          organization: form.organization || 'Individual',
+          organization: form.organization,
           contact_name: form.contact_name,
           email: form.email,
-          amount_range: 'To discuss',
+          phone: form.phone,
+          amount_range: form.amount_range,
           message: form.message,
         })
       } else if (mode === 'partner') {
         await api.partnerRequest({
-          institution_name: form.institution_name || form.organization,
-          institution_type: 'institution',
+          institution_name: form.institution_name,
+          institution_type: form.institution_type,
           contact_name: form.contact_name,
           email: form.email,
-          offer: 'other',
+          offer: form.offer,
           message: form.message,
         })
       } else {
         await api.volunteerRequest({
-          kind: 'mentor',
-          full_name: form.full_name || form.contact_name,
+          kind: form.kind,
+          full_name: form.full_name,
           email: form.email,
+          phone: form.phone,
           organization: form.organization,
-          expertise: form.expertise || 'General support',
+          expertise: form.expertise,
+          faculty: form.faculty,
           message: form.message,
         })
       }
@@ -59,15 +83,17 @@ export function GetInvolvedPage() {
         email: '',
         organization: '',
         institution_name: '',
+        institution_type: '',
+        offer: 'other',
+        amount_range: '',
+        phone: '',
+        kind: 'mentor',
+        faculty: '',
         message: '',
         expertise: '',
       })
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? 'Could not send right now. Please try again or email the team.'
-          : 'Network error. Please try again later.',
-      )
+      setError(err instanceof ApiError ? err.message : 'Network error. Please try again later.')
     }
   }
 
@@ -171,6 +197,7 @@ export function GetInvolvedPage() {
             <label>
               {mode === 'partner' ? 'Institution' : 'Organization'}
               <input
+                required={mode === 'partner' || mode === 'fund'}
                 value={mode === 'partner' ? form.institution_name : form.organization}
                 onChange={(e) =>
                   setForm({
@@ -181,14 +208,92 @@ export function GetInvolvedPage() {
                 }
               />
             </label>
+            {mode === 'fund' && (
+              <>
+                <label>
+                  Phone (optional)
+                  <input
+                    type="tel"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Funding amount or range
+                  <input
+                    required
+                    value={form.amount_range}
+                    onChange={(e) => setForm({ ...form, amount_range: e.target.value })}
+                  />
+                </label>
+              </>
+            )}
+            {mode === 'partner' && (
+              <>
+                <label>
+                  Institution type
+                  <input
+                    required
+                    value={form.institution_type}
+                    onChange={(e) => setForm({ ...form, institution_type: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Partnership offer
+                  <select
+                    value={form.offer}
+                    onChange={(e) => setForm({ ...form, offer: e.target.value })}
+                  >
+                    <option value="lab">Lab</option>
+                    <option value="clinical_validation_site">Clinical validation site</option>
+                    <option value="placement">Placement</option>
+                    <option value="other">Other</option>
+                  </select>
+                </label>
+              </>
+            )}
             {mode === 'volunteer' && (
-              <label>
-                Expertise
-                <input
-                  value={form.expertise}
-                  onChange={(e) => setForm({ ...form, expertise: e.target.value })}
-                />
-              </label>
+              <>
+                <label>
+                  Volunteer role
+                  <select
+                    value={form.kind}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        kind: e.target.value as VolunteerKind,
+                      })
+                    }
+                  >
+                    <option value="mentor">Mentor</option>
+                    <option value="judge">Judge</option>
+                    <option value="ambassador">Ambassador</option>
+                    <option value="exhibitor">Exhibitor</option>
+                  </select>
+                </label>
+                <label>
+                  Phone (optional)
+                  <input
+                    type="tel"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Expertise
+                  <input
+                    value={form.expertise}
+                    onChange={(e) => setForm({ ...form, expertise: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Faculty (optional)
+                  <input
+                    value={form.faculty}
+                    onChange={(e) => setForm({ ...form, faculty: e.target.value })}
+                  />
+                </label>
+              </>
             )}
             <label>
               Message
