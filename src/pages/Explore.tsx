@@ -24,6 +24,8 @@ type SelectedRecord = {
   data: unknown
 }
 
+const API_REFRESH_INTERVAL = 60_000
+
 function textValue(value: unknown): string {
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return String(value)
@@ -298,6 +300,7 @@ async function loadSections(): Promise<ApiSection[]> {
 export function ExplorePage() {
   const [sections, setSections] = useState<ApiSection[]>([])
   const [loading, setLoading] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [selected, setSelected] = useState<SelectedRecord | null>(null)
   const [detailError, setDetailError] = useState('')
   const [nominationMessage, setNominationMessage] = useState('')
@@ -305,22 +308,38 @@ export function ExplorePage() {
   const [eventMessage, setEventMessage] = useState('')
   const [eventError, setEventError] = useState('')
 
-  async function refresh(showLoading = true) {
-    if (showLoading) setLoading(true)
-    setSelected(null)
-    setSections(await loadSections())
-    setLoading(false)
-  }
-
   useEffect(() => {
     let active = true
-    void loadSections().then((loadedSections) => {
-      if (!active) return
-      setSections(loadedSections)
-      setLoading(false)
-    })
+    let inFlight = false
+
+    async function refresh() {
+      if (inFlight || document.visibilityState === 'hidden') return
+      inFlight = true
+      try {
+        const loadedSections = await loadSections()
+        if (active) {
+          setSections(loadedSections)
+          setLastUpdated(new Date())
+        }
+      } finally {
+        inFlight = false
+        if (active) setLoading(false)
+      }
+    }
+
+    function refreshWhenVisible() {
+      if (document.visibilityState === 'visible') void refresh()
+    }
+
+    void refresh()
+    const timer = window.setInterval(() => void refresh(), API_REFRESH_INTERVAL)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    window.addEventListener('focus', refreshWhenVisible)
     return () => {
       active = false
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+      window.removeEventListener('focus', refreshWhenVisible)
     }
   }, [])
 
@@ -387,31 +406,117 @@ export function ExplorePage() {
     }
   }
 
-  const categories =
-    sections.find((section) => section.id === 'award-categories')?.records ?? []
+  const awardCategories = sections.find((section) => section.id === 'award-categories')
+  const categories = awardCategories?.records ?? []
+  const publishedRecords = sections.reduce((total, section) => total + section.records.length, 0)
+  const liveSections = sections.filter((section) => !section.error && section.records.length > 0).length
+
   return (
     <>
-      <section className="page-hero">
+      <section className="page-hero explore-hero">
         <HeroBackgroundSlides />
         <div className="container">
-          <p className="eyebrow eyebrow--on-dark">Explore AxonAfrica</p>
-          <h1>Programs, people, events, and impact.</h1>
-          <p>Explore public information published by the AxonAfrica API.</p>
+          <div className="page-hero__content">
+            <div className="page-hero__copy">
+              <p className="eyebrow eyebrow--on-dark">Explore AxonAfrica</p>
+              <h1>Programs, people, events, and impact.</h1>
+              <p>Explore public information published by the AxonAfrica API.</p>
+            </div>
+
+            <div className="card explore-hero-panel">
+              <p className="eyebrow eyebrow--on-dark">Live ecosystem</p>
+              <div className="explore-stat-grid">
+                <div>
+                  <strong>{liveSections}</strong>
+                  <span>sections live</span>
+                </div>
+                <div>
+                  <strong>{publishedRecords}</strong>
+                  <span>public records</span>
+                </div>
+                <div>
+                  <strong>{lastUpdated ? lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'sync'}</strong>
+                  <span>last refresh</span>
+                </div>
+              </div>
+              <ul className="explore-hero-list">
+                <li>Programs and cohorts</li>
+                <li>Innovators and alumni</li>
+                <li>Events and impact data</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
       <section className="section">
         <div className="container">
+          <div className="explore-summary">
+            <div className="card explore-summary__card">
+              <div>
+                <p className="eyebrow eyebrow--leaf">Public data</p>
+                <h2>Explore the AxonAfrica ecosystem</h2>
+              </div>
+              <div className="explore-summary__meta">
+                <span>{liveSections} active sections</span>
+                <span>{publishedRecords} records</span>
+              </div>
+            </div>
+          </div>
+
           <nav className="explore-nav" aria-label="Explore API sections">
-            {sections.map((section) => (
-              <a key={section.id} href={`#${section.id}`}>
-                {section.title}
-              </a>
-            ))}
-            <a href="#impact">Impact</a>
-            <a href="#nominate">Nominate</a>
+            {[
+              {
+                label: 'Programs',
+                items: ['events', 'programs', 'stages', 'cohorts', 'news'],
+              },
+              {
+                label: 'People',
+                items: ['speakers', 'team', 'alumni', 'innovators', 'award-winners'],
+              },
+              {
+                label: 'Insights',
+                items: ['award-categories', 'press-kit', 'impact-reports', 'hero-slides'],
+              },
+              {
+                label: 'Quick links',
+                items: ['impact', 'nominate'],
+              },
+            ].map((group) => {
+              const visibleItems = group.items
+                .map((itemId) => {
+                  if (itemId === 'impact') return { id: 'impact', title: 'Impact' }
+                  if (itemId === 'nominate') return { id: 'nominate', title: 'Nominate' }
+                  return sections.find((section) => section.id === itemId)
+                })
+                .filter((item): item is { id: string; title: string } => Boolean(item))
+
+              if (!visibleItems.length) return null
+
+              return (
+                <details className="explore-nav__group" key={group.label}>
+                  <summary className="explore-nav__trigger">
+                    {group.label}
+                    <span className="explore-nav__chevron" aria-hidden="true" />
+                  </summary>
+                  <div className="explore-nav__menu">
+                    {visibleItems.map((item) => (
+                      <a key={item.id} href={`#${item.id}`}>
+                        {item.title}
+                      </a>
+                    ))}
+                  </div>
+                </details>
+              )
+            })}
           </nav>
 
           {loading && <p role="status">Loading public API content…</p>}
+          {!loading && (
+            <p className="section-lead" role="status">
+              API content updates automatically every minute
+              {lastUpdated && ` · Last updated ${lastUpdated.toLocaleTimeString()}`}.
+            </p>
+          )}
           {!loading &&
             sections.map((section) => (
               <section className="explore-section" id={section.id} key={section.id}>
@@ -423,6 +528,7 @@ export function ExplorePage() {
                   <div className="grid-3 explore-section__grid">
                     {section.records.map((item) => (
                       <article className="card explore-card" key={item.key}>
+                        <span className="explore-card__eyebrow">{section.title}</span>
                         <h3>{item.title}</h3>
                         <p>{item.description}</p>
                         <button
@@ -487,8 +593,14 @@ export function ExplorePage() {
           <section className="explore-section" id="nominate">
             <h2 className="section-title">Nominate an innovator</h2>
             <p className="section-lead">Send a nomination to one of the published award categories.</p>
-            {categories.length === 0 ? (
-              <p>Award nominations will be available when categories are published.</p>
+            {awardCategories?.error ? (
+              <p className="form-error" role="alert">
+                Award categories could not be loaded. The page will retry automatically.
+              </p>
+            ) : categories.length === 0 ? (
+              <p role="status">
+                No award categories are currently published. This section updates automatically when categories are added.
+              </p>
             ) : (
               <form className="card form-stack explore-form" onSubmit={submitNomination}>
                 <label>
@@ -511,9 +623,6 @@ export function ExplorePage() {
               </form>
             )}
           </section>
-          <button type="button" className="btn btn--outline-dark" onClick={() => void refresh()}>
-            Refresh API content
-          </button>
         </div>
       </section>
     </>
@@ -526,23 +635,49 @@ function ImpactBreakdown() {
   const [error, setError] = useState('')
   useEffect(() => {
     let active = true
-    Promise.all([api.impactBreakdown(), api.impactStats()])
-      .then(([breakdown, impactStats]) => {
+    let refreshing = false
+
+    async function refresh() {
+      if (refreshing || document.visibilityState === 'hidden') return
+      refreshing = true
+      try {
+        const [breakdown, impactStats] = await Promise.all([
+          api.impactBreakdown(),
+          api.impactStats(),
+        ])
         if (!active) return
         setData(breakdown)
         setStats(impactStats)
-      })
-      .catch((cause: unknown) => {
-        if (active) setError(cause instanceof ApiError ? cause.message : 'Impact data could not be loaded.')
-      })
+        setError('')
+      } catch (cause) {
+        if (active) {
+          setError(cause instanceof ApiError ? cause.message : 'Impact data could not be loaded.')
+        }
+      } finally {
+        refreshing = false
+      }
+    }
+
+    function refreshWhenVisible() {
+      if (document.visibilityState === 'visible') void refresh()
+    }
+
+    void refresh()
+    const timer = window.setInterval(() => void refresh(), API_REFRESH_INTERVAL)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    window.addEventListener('focus', refreshWhenVisible)
     return () => {
       active = false
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+      window.removeEventListener('focus', refreshWhenVisible)
     }
   }, [])
-  if (error) return <p className="form-error" role="alert">{error}</p>
+  if (error && !data) return <p className="form-error" role="alert">{error}</p>
   if (!data || !stats) return <p role="status">Loading impact data…</p>
   return (
-    <>
+    <div aria-live="polite">
+      {error && <p className="form-error" role="alert">{error} Showing the last successfully loaded impact data.</p>}
       <div className="grid-3">
         {stats.map((stat) => (
           <div className="card" key={stat.key}>
@@ -563,6 +698,6 @@ function ImpactBreakdown() {
           {data.by_stage.length ? <ul>{data.by_stage.map((item) => <li key={item.code || item.label}>{item.label}: {item.count}</li>)}</ul> : <p>No stage breakdown published.</p>}
         </div>
       </div>
-    </>
+    </div>
   )
 }
