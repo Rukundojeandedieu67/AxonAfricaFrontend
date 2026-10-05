@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { api, unwrapList, type Program, type ProgramStage } from '../api/client'
 import { HeroBackgroundSlides } from '../components/HeroBackgroundSlides'
 import { MediaFrame } from '../components/MediaFrame'
 import { Reveal } from '../components/Reveal'
@@ -24,7 +26,65 @@ const faqs = [
   },
 ]
 
+const fallbackStages: ProgramStage[] = [
+  {
+    id: 1,
+    code: 'seed',
+    name: 'Seed',
+    subtitle: 'Learn & define',
+    description:
+      'Identify a real health problem and define a solution grounded in community needs.',
+    order: 0,
+    modules: [
+      { id: 1, title: 'Identify a real health problem', description: '', order: 0 },
+      { id: 2, title: 'Design a solution that matches real needs', description: '', order: 1 },
+      { id: 3, title: 'Applied data & AI literacy', description: '', order: 2 },
+      { id: 4, title: 'Rapid prototyping fundamentals', description: '', order: 3 },
+      { id: 5, title: 'AI ethics across the project lifecycle', description: '', order: 4 },
+    ],
+  },
+  {
+    id: 2,
+    code: 'plant',
+    name: 'Plant',
+    subtitle: 'Build & test',
+    description:
+      'Matched with designers and technologists, then prototype, test, and implement inside a partner institution.',
+    order: 1,
+    modules: [],
+  },
+  {
+    id: 3,
+    code: 'canopy',
+    name: 'Canopy',
+    subtitle: 'Grow & sustain',
+    description: 'Keep building beyond the program, backed by the AxonAfrica innovator network.',
+    order: 2,
+    modules: [],
+  },
+]
+
 export function ProgramPage() {
+  const [stages, setStages] = useState<ProgramStage[]>(fallbackStages)
+  const [programs, setPrograms] = useState<Program[]>([])
+
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      const [stageData, programData] = await Promise.all([
+        api.stages().catch(() => null),
+        api.programs().catch(() => null),
+      ])
+      if (!alive) return
+      const nextStages = unwrapList(stageData).sort((a, b) => a.order - b.order)
+      if (nextStages.length) setStages(nextStages)
+      setPrograms(unwrapList(programData).sort((a, b) => a.order - b.order))
+    })()
+    return () => {
+      alive = false
+    }
+  }, [])
+
   return (
     <>
       <section className="page-hero">
@@ -65,42 +125,63 @@ export function ProgramPage() {
         <div className="container">
           <Reveal>
             <p className="eyebrow eyebrow--leaf">How it works</p>
-            <h2 className="section-title">Seed → Plant → Canopy</h2>
+            <h2 className="section-title">
+              {stages.map((stage) => stage.name).join(' → ') || 'Seed → Plant → Canopy'}
+            </h2>
             <StagePath compact animated={false} drawOnView />
           </Reveal>
           <div className="grid-3" style={{ marginTop: '1.75rem' }}>
-            <Reveal>
-              <article className="card">
-                <h3>Seed — Learn &amp; define</h3>
-                <ul>
-                  <li>Identify a real health problem</li>
-                  <li>Design a solution that matches real needs</li>
-                  <li>Applied data &amp; AI literacy</li>
-                  <li>Rapid prototyping fundamentals</li>
-                  <li>AI ethics across the project lifecycle</li>
-                </ul>
-              </article>
-            </Reveal>
-            <Reveal>
-              <article className="card">
-                <h3>Plant — Build &amp; test</h3>
-                <p>
-                  Matched with designers and technologists, then prototype, test, and implement
-                  inside a partner institution that shares the project&apos;s mission.
-                </p>
-              </article>
-            </Reveal>
-            <Reveal>
-              <article className="card">
-                <h3>Canopy — Grow &amp; sustain</h3>
-                <p>
-                  Keep building beyond the program, backed by the AxonAfrica innovator network.
-                </p>
-              </article>
-            </Reveal>
+            {stages.map((stage, index) => (
+              <Reveal key={stage.id} delay={index * 80}>
+                <article className="card">
+                  <h3>
+                    {stage.name}
+                    {stage.subtitle ? ` — ${stage.subtitle}` : ''}
+                  </h3>
+                  {stage.modules.length > 0 ? (
+                    <ul>
+                      {stage.modules
+                        .slice()
+                        .sort((a, b) => a.order - b.order)
+                        .map((module) => (
+                          <li key={module.id}>{module.title}</li>
+                        ))}
+                    </ul>
+                  ) : (
+                    <p>{stage.description}</p>
+                  )}
+                </article>
+              </Reveal>
+            ))}
           </div>
         </div>
       </section>
+
+      {programs.length > 0 && (
+        <section className="section">
+          <div className="container">
+            <Reveal>
+              <p className="eyebrow eyebrow--leaf">Programs</p>
+              <h2 className="section-title">What AxonAfrica runs</h2>
+              <p className="section-lead">
+                Live programs from the AxonAfrica API — including AXON HUB, the summit, and awards.
+              </p>
+            </Reveal>
+            <div className="grid-3" style={{ marginTop: '1.75rem' }}>
+              {programs.map((program, index) => (
+                <Reveal key={program.slug} delay={index * 80}>
+                  <article className="card">
+                    <p className="eyebrow eyebrow--leaf">{program.kind.replaceAll('_', ' ')}</p>
+                    <h3>{program.name}</h3>
+                    {program.tagline && <p style={{ fontWeight: 600 }}>{program.tagline}</p>}
+                    <p style={{ marginBottom: 0 }}>{program.description}</p>
+                  </article>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="section">
         <div className="container" style={{ display: 'grid', gap: '2rem', maxWidth: 720 }}>

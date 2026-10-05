@@ -232,11 +232,21 @@ export function GetInvolvedPage() {
               <>
                 <label>
                   Institution type
-                  <input
+                  <select
                     required
                     value={form.institution_type}
                     onChange={(e) => setForm({ ...form, institution_type: e.target.value })}
-                  />
+                  >
+                    <option value="" disabled>
+                      Select type
+                    </option>
+                    <option value="hospital">Hospital</option>
+                    <option value="ministry">Ministry</option>
+                    <option value="university">University</option>
+                    <option value="funder">Funder</option>
+                    <option value="tech">Technology</option>
+                    <option value="ngo">NGO</option>
+                  </select>
                 </label>
                 <label>
                   Partnership offer

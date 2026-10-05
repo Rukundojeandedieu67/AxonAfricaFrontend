@@ -105,12 +105,13 @@ export function ApplyPage() {
   const remainingMs = deadline
     ? new Date(deadline).getTime() - now
     : 0
-  const applicationStatus = !opensAt || !deadline
+  const applicationStatus: 'upcoming' | 'open' | 'closed' = !applicationWindow
     ? 'closed'
-    : now < new Date(opensAt).getTime()
-      ? 'upcoming'
-      : remainingMs > 0
-        ? 'open'
+    : applicationWindow.is_open || applicationWindow.status === 'open'
+      ? 'open'
+      : applicationWindow.status === 'upcoming' ||
+          (Boolean(opensAt) && now < new Date(opensAt as string).getTime())
+        ? 'upcoming'
         : 'closed'
   const windowIsOpen = applicationStatus === 'open'
 

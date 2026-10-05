@@ -16,6 +16,9 @@ React + Vite website for **AxonAfrica** (Phase 1 from the design brief).
 | `/about` | Story & team |
 | `/get-involved` | Fund / Partner / Volunteer |
 | `/stories` | News & contact |
+| `/explore` | Live API browser |
+| `/account` | Innovator / staff account |
+| `/staff/applications` | Staff application review |
 
 ## Local
 
