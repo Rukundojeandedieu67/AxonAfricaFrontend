@@ -13,6 +13,7 @@ import {
 } from '../api/client'
 import { HeroBackgroundSlides } from '../components/HeroBackgroundSlides'
 import './Explore.css'
+import './Account.css'
 
 type AuthMode = 'login' | 'register' | 'reset'
 
@@ -268,23 +269,40 @@ export function AccountPage() {
   }
 
   return (
-    <>
-      <section className="page-hero">
+    <div className="account-shell">
+      <section className={`page-hero account-hero${user ? ' account-hero--in' : ''}`}>
         <HeroBackgroundSlides />
-        <div className="container">
-          <p className="eyebrow eyebrow--on-dark">AxonAfrica account</p>
-          <h1>{user ? `Welcome, ${user.first_name || user.email}` : 'Your account and program activity.'}</h1>
-          <p>Sign in to access your profile, applications, assignments, and learning progress.</p>
+        <div className="container account-hero__inner">
+          <img
+            className="account-hero__brand"
+            src="/logo-axonafrica.png"
+            alt="AxonAfrica"
+            width={200}
+            height={58}
+          />
+          <p className="eyebrow eyebrow--on-dark">
+            {user ? 'Your workspace' : 'AxonAfrica account'}
+          </p>
+          <h1>
+            {user
+              ? `Welcome back${user.first_name ? `, ${user.first_name}` : ''}.`
+              : 'Your account and program activity.'}
+          </h1>
+          <p>
+            {user
+              ? 'Profile, applications, assignments, and learning progress — in one calm place.'
+              : 'Sign in to access your profile, applications, assignments, and learning progress.'}
+          </p>
         </div>
       </section>
-      <section className="section">
+      <section className="section account-body">
         <div className="container account-page">
           {error && <p className="form-error" role="alert">{error}</p>}
           {notice && <p className="form-ok" role="status">{notice}</p>}
-          {loading && <p role="status">Loading account…</p>}
+          {loading && <p className="account-loading" role="status">Opening your workspace…</p>}
 
           {resetUid && resetToken ? (
-            <form className="card form-stack account-form" onSubmit={onResetConfirm}>
+            <form className="account-panel form-stack account-form" onSubmit={onResetConfirm}>
               <h2>Choose a new password</h2>
               <label>New password<input type="password" name="new_password" autoComplete="new-password" minLength={8} required /></label>
               <button type="submit" className="btn btn--gold">Reset password</button>
@@ -296,7 +314,7 @@ export function AccountPage() {
                   <button
                     key={item}
                     type="button"
-                    className={`btn ${mode === item ? 'btn--green' : 'btn--outline-dark'}`}
+                    className={`account-tab ${mode === item ? 'is-active' : ''}`}
                     role="tab"
                     aria-selected={mode === item}
                     onClick={() => { setMode(item); setError(''); setNotice('') }}
@@ -306,16 +324,18 @@ export function AccountPage() {
                 ))}
               </div>
               {mode === 'login' && (
-                <form className="card form-stack account-form" onSubmit={onLogin}>
+                <form className="account-panel form-stack account-form" onSubmit={onLogin}>
                   <h2>Sign in</h2>
+                  <p className="account-panel__lead">Continue into your AxonAfrica journey.</p>
                   <label>Email<input name="email" type="email" autoComplete="email" required /></label>
                   <label>Password<input name="password" type="password" autoComplete="current-password" required /></label>
                   <button type="submit" className="btn btn--gold">Sign in</button>
                 </form>
               )}
               {mode === 'register' && (
-                <form className="card form-stack account-form" onSubmit={onRegister}>
+                <form className="account-panel form-stack account-form" onSubmit={onRegister}>
                   <h2>Create an innovator account</h2>
+                  <p className="account-panel__lead">Start with your details — the pathway opens from here.</p>
                   <label>Full name<input name="full_name" autoComplete="name" required /></label>
                   <label>Email<input name="email" type="email" autoComplete="email" required /></label>
                   <label>Password<input name="password" type="password" autoComplete="new-password" minLength={8} required /></label>
@@ -333,25 +353,77 @@ export function AccountPage() {
                 </form>
               )}
               {mode === 'reset' && (
-                <form className="card form-stack account-form" onSubmit={onResetRequest}>
+                <form className="account-panel form-stack account-form" onSubmit={onResetRequest}>
                   <h2>Reset password</h2>
-                  <p>Enter your account email. If there is an account, the API will send a reset link.</p>
+                  <p className="account-panel__lead">Enter your account email. If there is an account, the API will send a reset link.</p>
                   <label>Email<input name="email" type="email" autoComplete="email" required /></label>
                   <button type="submit" className="btn btn--gold">Send reset link</button>
                 </form>
               )}
             </div>
           ) : (
-            <>
-              <div className="account-heading">
-                <h2>{user.first_name} {user.last_name}</h2>
-                <p>{user.email} · {user.role}</p>
-                {user.role === 'staff' && <Link className="btn btn--outline-dark" to="/staff/applications">Review applications</Link>}
-                <button type="button" className="btn btn--outline-dark" onClick={onLogout}>Sign out</button>
-              </div>
+            <div className="account-dash">
+              <section className="account-welcome">
+                <div className="account-welcome__copy">
+                  <span className="account-role">{user.role.replaceAll('_', ' ')}</span>
+                  <h2>
+                    {[user.first_name, user.last_name].filter(Boolean).join(' ') || 'Your profile'}
+                  </h2>
+                  <p>{user.email}</p>
+                </div>
+                <div className="account-welcome__actions">
+                  {user.role === 'staff' && (
+                    <Link className="btn btn--gold" to="/staff/applications">
+                      Review applications
+                    </Link>
+                  )}
+                  {user.role !== 'staff' && (
+                    <Link className="btn btn--gold" to="/apply">
+                      Apply / continue
+                    </Link>
+                  )}
+                  <Link className="btn btn--outline-light" to="/explore">
+                    Explore network
+                  </Link>
+                  <button type="button" className="btn btn--outline-light" onClick={onLogout}>
+                    Sign out
+                  </button>
+                </div>
+              </section>
+
+              <section className="account-metrics" aria-label="Account snapshot">
+                {user.role === 'innovator' && (
+                  <article className="account-metric">
+                    <strong>{progress?.progress_percent ?? 0}%</strong>
+                    <span>Learning progress</span>
+                    <p>{progress?.current_stage || 'Stage not set yet'}</p>
+                  </article>
+                )}
+                <article className="account-metric">
+                  <strong>{applications.length}</strong>
+                  <span>Applications</span>
+                  <p>{applications.length ? 'Linked to this account' : 'None linked yet'}</p>
+                </article>
+                <article className="account-metric">
+                  <strong>
+                    {(assignments?.cohorts.length ?? 0) + (assignments?.events.length ?? 0)}
+                  </strong>
+                  <span>Assignments</span>
+                  <p>Cohorts and events</p>
+                </article>
+                {progress?.cohort?.name && (
+                  <article className="account-metric">
+                    <strong className="account-metric__text">{progress.cohort.name}</strong>
+                    <span>Active cohort</span>
+                    <p>Your current program home</p>
+                  </article>
+                )}
+              </section>
+
               <div className="account-grid">
-                <form className="card form-stack" onSubmit={onProfileUpdate}>
+                <form className="account-panel form-stack" onSubmit={onProfileUpdate}>
                   <h2>Profile</h2>
+                  <p className="account-panel__lead">Keep your details current for the team and partners.</p>
                   <label>First name<input name="first_name" defaultValue={user.first_name} /></label>
                   <label>Last name<input name="last_name" defaultValue={user.last_name} /></label>
                   <label>Phone<input name="phone" defaultValue={user.phone} /></label>
@@ -359,13 +431,16 @@ export function AccountPage() {
                   <label>
                     Preferred language
                     <select name="preferred_language" defaultValue={user.preferred_language}>
-                      <option value="en">English</option><option value="fr">French</option><option value="rw">Kinyarwanda</option>
+                      <option value="en">English</option>
+                      <option value="fr">French</option>
+                      <option value="rw">Kinyarwanda</option>
                     </select>
                   </label>
                   <button type="submit" className="btn btn--gold">Save profile</button>
                 </form>
-                <form className="card form-stack" onSubmit={onPasswordChange}>
-                  <h2>Change password</h2>
+                <form className="account-panel form-stack" onSubmit={onPasswordChange}>
+                  <h2>Security</h2>
+                  <p className="account-panel__lead">Update your password when you need a fresh key.</p>
                   <label>Current password<input name="current_password" type="password" autoComplete="current-password" required /></label>
                   <label>New password<input name="new_password" type="password" autoComplete="new-password" minLength={8} required /></label>
                   <button type="submit" className="btn btn--gold">Change password</button>
@@ -374,17 +449,30 @@ export function AccountPage() {
 
               {user.role === 'innovator' && progress && (
                 <section className="account-section">
-                  <h2>Learning progress</h2>
-                  <p>{progress.cohort.name} · {progress.current_stage || 'Stage not set'} · {progress.progress_percent}%</p>
-                  <div className="grid-3">
+                  <div className="account-section__intro">
+                    <p className="eyebrow eyebrow--leaf">Learning</p>
+                    <h2>Your pathway progress</h2>
+                    <p>
+                      {progress.cohort.name}
+                      {progress.current_stage ? ` · ${progress.current_stage}` : ''}
+                      {' · '}
+                      {progress.progress_percent}% complete
+                    </p>
+                    <div className="account-progress-bar" aria-hidden="true">
+                      <span style={{ width: `${Math.min(100, Math.max(0, progress.progress_percent))}%` }} />
+                    </div>
+                  </div>
+                  <div className="account-modules">
                     {progress.module_progress.map((module) => (
                       <form
-                        className="card form-stack"
+                        className={`account-module form-stack status-${module.status}`}
                         key={module.id}
                         onSubmit={(event) => void onProgressUpdate(event, module.module)}
                       >
-                        <h3>{module.module_title}</h3>
-                        <p>{module.stage_name}</p>
+                        <div className="account-module__head">
+                          <span className="account-module__stage">{module.stage_name}</span>
+                          <h3>{module.module_title}</h3>
+                        </div>
                         <label>
                           Status
                           <select name="status" defaultValue={module.status}>
@@ -403,19 +491,26 @@ export function AccountPage() {
 
               {assignments && (
                 <section className="account-section">
-                  <h2>Assignments</h2>
+                  <div className="account-section__intro">
+                    <p className="eyebrow eyebrow--leaf">Assignments</p>
+                    <h2>Where you are placed</h2>
+                  </div>
                   {!assignments.cohorts.length && !assignments.events.length ? (
-                    <p>No cohort or event assignments are associated with this account.</p>
+                    <p className="account-empty">No cohort or event assignments are associated with this account yet.</p>
                   ) : (
-                    <div className="grid-3">
+                    <div className="account-tiles">
                       {assignments.cohorts.map((item) => (
-                        <article className="card" key={`cohort-${item.id}`}>
-                          <h3>{item.cohort.name}</h3><p>{item.role} · {item.notes}</p>
+                        <article className="account-tile" key={`cohort-${item.id}`}>
+                          <span className="account-tile__eyebrow">Cohort</span>
+                          <h3>{item.cohort.name}</h3>
+                          <p>{item.role}{item.notes ? ` · ${item.notes}` : ''}</p>
                         </article>
                       ))}
                       {assignments.events.map((item) => (
-                        <article className="card" key={`event-${item.id}`}>
-                          <h3>{item.event.title}</h3><p>{item.role} · {item.notes}</p>
+                        <article className="account-tile" key={`event-${item.id}`}>
+                          <span className="account-tile__eyebrow">Event</span>
+                          <h3>{item.event.title}</h3>
+                          <p>{item.role}{item.notes ? ` · ${item.notes}` : ''}</p>
                         </article>
                       ))}
                     </div>
@@ -429,15 +524,31 @@ export function AccountPage() {
 
               {user.role !== 'staff' && (
                 <section className="account-section">
-                  <h2>Applications</h2>
+                  <div className="account-section__intro">
+                    <p className="eyebrow eyebrow--leaf">Applications</p>
+                    <h2>Ideas you have submitted</h2>
+                  </div>
                   {applications.length ? (
-                    <div className="grid-3">
+                    <div className="account-tiles">
                       {applications.map((application) => (
-                        <article className="card" key={application.id}>
+                        <article className="account-tile" key={application.id}>
+                          <span className="account-tile__eyebrow">
+                            {application.status.replaceAll('_', ' ')}
+                          </span>
                           <h3>{application.idea_title}</h3>
-                          <p>{application.status.replaceAll('_', ' ')} · {new Date(application.created_at).toLocaleDateString()}</p>
-                          {application.cv && <a href={application.cv} target="_blank" rel="noreferrer">View CV</a>}
-                          {application.pitch_deck && <a href={application.pitch_deck} target="_blank" rel="noreferrer">View pitch deck</a>}
+                          <p>{new Date(application.created_at).toLocaleDateString()}</p>
+                          <div className="account-tile__links">
+                            {application.cv && (
+                              <a href={application.cv} target="_blank" rel="noreferrer">
+                                View CV
+                              </a>
+                            )}
+                            {application.pitch_deck && (
+                              <a href={application.pitch_deck} target="_blank" rel="noreferrer">
+                                View pitch deck
+                              </a>
+                            )}
+                          </div>
                           <button
                             className="btn btn--outline-dark"
                             type="button"
@@ -449,12 +560,17 @@ export function AccountPage() {
                       ))}
                     </div>
                   ) : (
-                    <p>No applications are linked to this account. <Link to="/apply">Start an application</Link>.</p>
+                    <p className="account-empty">
+                      No applications are linked to this account yet.{' '}
+                      <Link to="/apply">Start an application</Link>.
+                    </p>
                   )}
                   {selectedApplication && (
-                    <article className="card account-section__application">
+                    <article className="account-panel account-section__application">
                       <h3>{selectedApplication.idea_title}</h3>
-                      <p>Status: {selectedApplication.status.replaceAll('_', ' ')}</p>
+                      <p className="account-panel__lead">
+                        Status: {selectedApplication.status.replaceAll('_', ' ')}
+                      </p>
                       <h4>Problem statement</h4>
                       <p>{selectedApplication.problem_statement}</p>
                       <h4>Idea summary</h4>
@@ -470,11 +586,11 @@ export function AccountPage() {
                   )}
                 </section>
               )}
-            </>
+            </div>
           )}
         </div>
       </section>
-    </>
+    </div>
   )
 }
 
@@ -540,11 +656,17 @@ function InnovatorModuleUpdates() {
 
   return (
     <section className="account-section">
-      <h2>Update an innovator’s module progress</h2>
-      <p>Available innovators and modules are provided by the API. Your account can update only records it is permitted to manage.</p>
+      <div className="account-section__intro">
+        <p className="eyebrow eyebrow--leaf">Mentorship tools</p>
+        <h2>Update an innovator’s module progress</h2>
+        <p>
+          Available innovators and modules come from the API. You can update only records your role
+          is permitted to manage.
+        </p>
+      </div>
       {error && <p className="form-error" role="alert">{error}</p>}
       {notice && <p className="form-ok" role="status">{notice}</p>}
-      <form className="card form-stack account-form" onSubmit={onSubmit}>
+      <form className="account-panel form-stack account-form" onSubmit={onSubmit}>
         <label>
           Innovator
           <select
