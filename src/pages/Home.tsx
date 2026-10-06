@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, unwrapList, type HeroSlide, type Partner } from '../api/client'
+import { api, unwrapList, type Partner } from '../api/client'
 import { AnimatedStat } from '../components/AnimatedStat'
 import { HeroBackgroundControl } from '../components/HeroBackgroundControl'
+import { HeroBackgroundSlides } from '../components/HeroBackgroundSlides'
 import { MediaFrame } from '../components/MediaFrame'
 import { Reveal } from '../components/Reveal'
 import { StagePath } from '../components/StagePath'
@@ -60,8 +61,7 @@ const seedModules = [
 
 export function HomePage() {
   const [partners, setPartners] = useState<Partner[]>([])
-  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([])
-  const [activeSlide, setActiveSlide] = useState(0)
+  const [hasHeroBgImages, setHasHeroBgImages] = useState(false)
   const [heroBg, setHeroBg] = useState<string | null>(() => getHeroBackground())
   const [stats, setStats] = useState({
     scholarsReached: '—',
@@ -83,14 +83,12 @@ export function HomePage() {
     let alive = true
     ;(async () => {
       try {
-        const [partnerData, impact, slideData] = await Promise.all([
+        const [partnerData, impact] = await Promise.all([
           api.partners().catch(() => []),
           api.impactStats().catch(() => null),
-          api.heroSlides().catch((): HeroSlide[] => []),
         ])
         if (!alive) return
         setPartners(unwrapList(partnerData).filter((p) => p.logo || p.name))
-        setHeroSlides(unwrapList(slideData).filter((slide) => slide.image))
         if (impact) {
           const valueFor = (key: string) => {
             const value = impact.find((stat) => stat.key === key)?.value
@@ -112,46 +110,28 @@ export function HomePage() {
     }
   }, [])
 
-  useEffect(() => {
-    if (heroSlides.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      return
-    }
-    const timer = window.setInterval(() => {
-      setActiveSlide((index) => (index + 1) % heroSlides.length)
-    }, 6000)
-    return () => window.clearInterval(timer)
-  }, [heroSlides.length])
-
   return (
     <div className="home">
       <section
-        className={`hero ${heroSlides.length ? 'hero--slides' : heroBg ? 'hero--photo' : ''}`}
+        className={`hero ${hasHeroBgImages ? 'hero--bg' : heroBg ? 'hero--photo' : ''}`}
         style={
-          heroBg && !heroSlides.length
+          heroBg && !hasHeroBgImages
             ? { ['--hero-photo' as string]: `url(${heroBg})` }
             : undefined
         }
       >
-        {heroSlides.length > 0 && (
-          <div className="hero__slides" aria-hidden="true">
-            {heroSlides.map((slide, index) => (
-              <img
-                key={slide.id}
-                className={`hero__slide ${index === activeSlide ? 'is-active' : ''}`}
-                src={slide.image}
-                alt=""
-                loading={index === 0 ? 'eager' : 'lazy'}
-                fetchPriority={index === 0 ? 'high' : 'auto'}
-              />
-            ))}
+        <HeroBackgroundSlides
+          variant="home"
+          onSlidesChange={(slides) => setHasHeroBgImages(slides.length > 0)}
+        />
+        <div className="hero__scrim" aria-hidden />
+        {!hasHeroBgImages && (
+          <div className="hero__orbs" aria-hidden>
+            <span />
+            <span />
+            <span />
           </div>
         )}
-        <div className="hero__scrim" aria-hidden />
-        <div className="hero__orbs" aria-hidden>
-          <span />
-          <span />
-          <span />
-        </div>
         <div className="container hero__grid">
           <div className="hero__copy hero__copy--enter">
             <img
