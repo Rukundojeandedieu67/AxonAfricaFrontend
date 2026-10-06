@@ -484,8 +484,6 @@ export function ExplorePage() {
     return sections.filter((section) => section.id === activeSection)
   }, [activeSection, sections])
 
-  const totalItems = sections.reduce((sum, section) => sum + section.items.length, 0)
-
   async function openItem(item: ExploreItem) {
     setDetailError('')
     setEventMessage('')
@@ -674,48 +672,56 @@ export function ExplorePage() {
   const showImpact = activeSection === 'all' || activeSection === 'impact'
   const showNominate =
     awardCategories.length > 0 && (activeSection === 'all' || activeSection === 'nominate')
+  const journeySection = sections.find((section) => section.id === 'journey')
+  const programSection = sections.find((section) => section.id === 'programs')
+  const otherSections = visibleSections.filter(
+    (section) => section.id !== 'journey' && section.id !== 'programs',
+  )
 
   return (
-    <>
+    <div className="explore-page">
       <section className="page-hero explore-hero">
         <HeroBackgroundSlides />
-        <div className="container">
-          <div className="page-hero__content">
-            <div className="page-hero__copy">
-              <p className="eyebrow eyebrow--on-dark">Explore</p>
-              <h1>Meet the work in motion.</h1>
-              <p>
-                Browse programs, the innovator journey, people, and impact — only what AxonAfrica has
-                published so far.
-              </p>
-            </div>
-            <div className="card explore-hero-panel">
-              <p className="eyebrow eyebrow--on-dark">Now live</p>
-              <div className="explore-stat-grid">
-                <div>
-                  <strong>{sections.length}</strong>
-                  <span>collections</span>
-                </div>
-                <div>
-                  <strong>{totalItems}</strong>
-                  <span>published</span>
-                </div>
-                <div>
-                  <strong>{stats.length || '—'}</strong>
-                  <span>impact stats</span>
-                </div>
-              </div>
-              <ul className="explore-hero-list">
-                <li>Programs &amp; journey stages</li>
-                <li>People when profiles go live</li>
-                <li>Impact as it is measured</li>
-              </ul>
-            </div>
+        <div className="container explore-hero__inner">
+          <img
+            className="explore-hero__brand"
+            src="/logo-axonafrica.png"
+            alt="AxonAfrica"
+            width={220}
+            height={64}
+          />
+          <p className="eyebrow eyebrow--on-dark">Explore the network</p>
+          <h1>A place built for African health ideas that refuse to stay on paper.</h1>
+          <p>
+            Walk the pathway from Seed to Canopy, meet the programs carrying scholars into real
+            institutions, and see what AxonAfrica is publishing now.
+          </p>
+          <div className="explore-hero__actions">
+            <Link to="/apply" className="btn btn--gold">
+              Apply to Cohort 1
+            </Link>
+            <a href="#journey" className="btn btn--outline-light">
+              Enter the journey
+            </a>
           </div>
         </div>
       </section>
 
-      <section className="section">
+      <section className="explore-invite" aria-label="Why explore">
+        <div className="container explore-invite__row">
+          <p>
+            <strong>Youth-led.</strong> Intelligent by design. Built so talent meets a door that
+            opens.
+          </p>
+          <div className="explore-invite__pulse" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+        </div>
+      </section>
+
+      <section className="section explore-body">
         <div className="container">
           <nav className="explore-filters" aria-label="Explore collections">
             <button
@@ -756,14 +762,16 @@ export function ExplorePage() {
             )}
           </nav>
 
-          {loading && <p role="status">Loading published content…</p>}
+          {loading && (
+            <p className="explore-loading" role="status">
+              Opening the live network…
+            </p>
+          )}
 
           {!loading && sections.length === 0 && (
-            <div className="card card--soft">
-              <h2 style={{ color: 'var(--heading-color)' }}>Nothing published yet</h2>
-              <p>
-                Explore will fill in as programs, people, and stories go live on the AxonAfrica API.
-              </p>
+            <div className="explore-empty">
+              <h2>The room is ready.</h2>
+              <p>Content will appear here as programs, people, and stories are published.</p>
               <Link to="/program" className="btn btn--gold">
                 See the program
               </Link>
@@ -771,36 +779,116 @@ export function ExplorePage() {
           )}
 
           {!loading &&
-            (activeSection === 'all' ||
-              (activeSection !== 'impact' && activeSection !== 'nominate')) &&
-            visibleSections.map((section) => (
-              <section className="explore-section" id={section.id} key={section.id}>
-                <h2 className="section-title">{section.title}</h2>
-                <p className="section-lead">{section.lead}</p>
-                <div className="grid-3 explore-section__grid">
-                  {section.items.map((item) => (
-                    <article className="card explore-card" key={item.id}>
-                      {item.image ? (
-                        <img className="explore-card__image" src={item.image} alt="" loading="lazy" />
-                      ) : null}
+            (activeSection === 'all' || activeSection === 'journey') &&
+            journeySection && (
+              <section className="explore-section explore-section--journey" id="journey">
+                <div className="explore-section__intro">
+                  <p className="eyebrow eyebrow--leaf">The pathway</p>
+                  <h2 className="section-title">Three stages. One continuous climb.</h2>
+                  <p className="section-lead">{journeySection.lead}</p>
+                </div>
+                <div className="explore-journey">
+                  {journeySection.items.map((item, index) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="explore-journey__step"
+                      onClick={() => void openItem(item)}
+                    >
+                      <span className="explore-journey__index">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <span className="explore-journey__body">
+                        {item.meta && <span className="explore-card__eyebrow">{item.meta}</span>}
+                        <strong>{item.title}</strong>
+                        <span>{item.summary}</span>
+                        <span className="explore-journey__cta">Open stage</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+          {!loading &&
+            (activeSection === 'all' || activeSection === 'programs') &&
+            programSection && (
+              <section className="explore-section explore-section--programs" id="programs">
+                <div className="explore-section__intro">
+                  <p className="eyebrow eyebrow--leaf">Programs</p>
+                  <h2 className="section-title">Where scholarship becomes a solution.</h2>
+                  <p className="section-lead">{programSection.lead}</p>
+                </div>
+                <div className="explore-features">
+                  {programSection.items.map((item, index) => (
+                    <article
+                      key={item.id}
+                      className={`explore-feature ${index === 0 ? 'explore-feature--lead' : ''}`}
+                    >
+                      <div className="explore-feature__glow" aria-hidden="true" />
                       {item.meta && <span className="explore-card__eyebrow">{item.meta}</span>}
                       <h3>{item.title}</h3>
-                      {item.summary && <p>{item.summary}</p>}
+                      <p>{item.summary}</p>
                       <button
                         type="button"
-                        className="btn btn--outline-dark"
+                        className="btn btn--gold"
                         onClick={() => void openItem(item)}
                       >
-                        View
+                        Discover
                       </button>
                     </article>
+                  ))}
+                </div>
+              </section>
+            )}
+
+          {!loading &&
+            (activeSection === 'all' ||
+              (activeSection !== 'impact' &&
+                activeSection !== 'nominate' &&
+                activeSection !== 'journey' &&
+                activeSection !== 'programs')) &&
+            otherSections.map((section) => (
+              <section className="explore-section" id={section.id} key={section.id}>
+                <div className="explore-section__intro">
+                  <p className="eyebrow eyebrow--leaf">{section.title}</p>
+                  <h2 className="section-title">{section.title}</h2>
+                  <p className="section-lead">{section.lead}</p>
+                </div>
+                <div className="explore-people">
+                  {section.items.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="explore-person"
+                      onClick={() => void openItem(item)}
+                    >
+                      {item.image ? (
+                        <img
+                          className="explore-person__image"
+                          src={item.image}
+                          alt=""
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <span className="explore-person__fallback" aria-hidden="true">
+                          {item.title.slice(0, 1)}
+                        </span>
+                      )}
+                      <span className="explore-person__copy">
+                        {item.meta && <span className="explore-card__eyebrow">{item.meta}</span>}
+                        <strong>{item.title}</strong>
+                        {item.summary && <span>{item.summary}</span>}
+                      </span>
+                    </button>
                   ))}
                 </div>
               </section>
             ))}
 
           {selectedItem && (
-            <section className="card explore-detail" aria-live="polite">
+            <section className="explore-detail" aria-live="polite">
               <div className="explore-detail__header">
                 <div>
                   <p className="eyebrow eyebrow--leaf">{selectedItem.meta || 'Details'}</p>
@@ -830,6 +918,7 @@ export function ExplorePage() {
                           className="explore-detail__image"
                           src={selectedEvent.cover_image}
                           alt=""
+                          referrerPolicy="no-referrer"
                         />
                       </Field>
                     )}
@@ -908,65 +997,43 @@ export function ExplorePage() {
           )}
 
           {showImpact && stats.length > 0 && (
-            <section className="explore-section" id="impact">
-              <h2 className="section-title">Impact</h2>
-              <p className="section-lead">Numbers published by AxonAfrica — no estimates added here.</p>
-              <div className="grid-3 explore-section__grid">
+            <section className="explore-impact" id="impact">
+              <div className="explore-impact__intro">
+                <p className="eyebrow eyebrow--on-dark">Impact</p>
+                <h2>Measured in the open.</h2>
+                <p>Live numbers from AxonAfrica — no estimates added here.</p>
+              </div>
+              <div className="explore-impact__grid">
                 {stats.map((stat) => (
-                  <article className="card explore-card" key={stat.key}>
-                    <strong className="explore-stat-value">{stat.value}</strong>
-                    <p>{stat.label}</p>
+                  <article key={stat.key}>
+                    <strong>{stat.value}</strong>
+                    <span>{stat.label}</span>
                   </article>
                 ))}
                 {breakdown && breakdown.alumni_count > 0 && (
-                  <article className="card explore-card">
-                    <strong className="explore-stat-value">{breakdown.alumni_count}</strong>
-                    <p>Alumni innovators</p>
+                  <article>
+                    <strong>{breakdown.alumni_count}</strong>
+                    <span>Alumni innovators</span>
                   </article>
                 )}
                 {breakdown && breakdown.active_cohort_innovators > 0 && (
-                  <article className="card explore-card">
-                    <strong className="explore-stat-value">{breakdown.active_cohort_innovators}</strong>
-                    <p>Active cohort innovators</p>
+                  <article>
+                    <strong>{breakdown.active_cohort_innovators}</strong>
+                    <span>Active cohort innovators</span>
                   </article>
                 )}
               </div>
-              {breakdown && (breakdown.by_country.length > 0 || breakdown.by_stage.length > 0) && (
-                <div className="grid-3 explore-section__grid" style={{ marginTop: '1rem' }}>
-                  {breakdown.by_country.length > 0 && (
-                    <article className="card">
-                      <h3>By country</h3>
-                      <ul>
-                        {breakdown.by_country.map((row) => (
-                          <li key={row.label}>
-                            {row.label}: {row.count}
-                          </li>
-                        ))}
-                      </ul>
-                    </article>
-                  )}
-                  {breakdown.by_stage.length > 0 && (
-                    <article className="card">
-                      <h3>By stage</h3>
-                      <ul>
-                        {breakdown.by_stage.map((row) => (
-                          <li key={row.code || row.label}>
-                            {row.label}: {row.count}
-                          </li>
-                        ))}
-                      </ul>
-                    </article>
-                  )}
-                </div>
-              )}
             </section>
           )}
 
           {showNominate && (
             <section className="explore-section" id="nominate">
-              <h2 className="section-title">Nominate an innovator</h2>
-              <p className="section-lead">Send a nomination to a published award category.</p>
-              <form className="card form-stack explore-form" onSubmit={submitNomination}>
+              <div className="explore-section__intro">
+                <p className="eyebrow eyebrow--leaf">Awards</p>
+                <h2 className="section-title">Nominate an innovator</h2>
+                <p className="section-lead">Send a nomination to a published award category.</p>
+              </div>
+              <form className="explore-nominate form-stack" onSubmit={submitNomination}>
                 <label>
                   Award category
                   <select name="category" required defaultValue="">
@@ -1012,8 +1079,25 @@ export function ExplorePage() {
               </form>
             </section>
           )}
+
+          <section className="explore-belong">
+            <p className="eyebrow eyebrow--on-dark">Belong here</p>
+            <h2>Bring the idea that will not leave you alone.</h2>
+            <p>
+              Cohort seats, institutional doors, and a youth-led network are waiting on the other
+              side of Apply.
+            </p>
+            <div className="explore-belong__actions">
+              <Link to="/apply" className="btn btn--gold">
+                Apply to Cohort 1
+              </Link>
+              <Link to="/get-involved" className="btn btn--outline-light">
+                Get involved
+              </Link>
+            </div>
+          </section>
         </div>
       </section>
-    </>
+    </div>
   )
 }
