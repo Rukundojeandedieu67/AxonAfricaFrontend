@@ -382,27 +382,13 @@ p {
   object-fit: cover;
   object-position: center;
   opacity: 0;
-  transform: scale(1.04);
-  will-change: opacity, transform;
+  visibility: hidden;
 }
 
 .page-hero__slide.is-active {
   opacity: 1;
-  animation: page-hero-bg-drift var(--hero-bg-crossfade, 2400ms) linear forwards;
+  visibility: visible;
   z-index: 1;
-}
-
-.page-hero__slides.is-cycling .page-hero__slide {
-  transition: opacity var(--hero-bg-crossfade, 2400ms) linear;
-}
-
-@keyframes page-hero-bg-drift {
-  from {
-    transform: scale(1.04) translate3d(0, 0, 0);
-  }
-  to {
-    transform: scale(1.1) translate3d(-1.2%, -0.8%, 0);
-  }
 }
 
 .page-hero .container {

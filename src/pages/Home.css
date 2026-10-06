@@ -51,27 +51,13 @@
   object-fit: cover;
   object-position: center;
   opacity: 0;
-  transform: scale(1.04);
-  will-change: opacity, transform;
+  visibility: hidden;
 }
 
 .hero__bg-image.is-active {
   opacity: 1;
+  visibility: visible;
   z-index: 1;
-  animation: hero-bg-drift var(--hero-bg-crossfade, 2400ms) linear forwards;
-}
-
-.hero__bg.is-cycling .hero__bg-image {
-  transition: opacity var(--hero-bg-crossfade, 2400ms) linear;
-}
-
-@keyframes hero-bg-drift {
-  from {
-    transform: scale(1.04) translate3d(0, 0, 0);
-  }
-  to {
-    transform: scale(1.1) translate3d(-1.2%, -0.8%, 0);
-  }
 }
 
 .hero__scrim {

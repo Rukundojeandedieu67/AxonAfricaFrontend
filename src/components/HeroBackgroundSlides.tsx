@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, unwrapList, type HeroSlide } from '../api/client'
 
-/** Crossfade length = swap cadence so images keep moving with no hold/delay. */
-export const HERO_BG_CROSSFADE_MS = 2400
+/** Each hero photo stays fully visible for this long, then the next cuts in. */
+export const HERO_BG_HOLD_MS = 4000
+
+/** Always the first image on every hero section. */
+export const HERO_FIRST_IMAGE = '/6.jpeg'
 
 export type HeroBgStatus = 'loading' | 'ready' | 'empty'
 
@@ -12,7 +15,10 @@ type Props = {
   onStatusChange?: (status: HeroBgStatus) => void
 }
 
-type ReadySlide = HeroSlide & { src: string }
+type ReadySlide = {
+  id: string | number
+  src: string
+}
 
 /**
  * Cloudinary raw URLs often fail in <img> when the browser sends a site Referer.
@@ -32,7 +38,6 @@ export function HeroBackgroundSlides({ variant = 'page', onStatusChange }: Props
   const [slides, setSlides] = useState<ReadySlide[]>([])
   const [activeSlide, setActiveSlide] = useState(0)
   const [status, setStatus] = useState<HeroBgStatus>('loading')
-  const [cycling, setCycling] = useState(false)
   const anchorRef = useRef<HTMLSpanElement>(null)
   const onStatusChangeRef = useRef(onStatusChange)
   onStatusChangeRef.current = onStatusChange
@@ -47,27 +52,30 @@ export function HeroBackgroundSlides({ variant = 'page', onStatusChange }: Props
     let active = true
 
     ;(async () => {
+      const usable: ReadySlide[] = []
+
+      // Local first image — appears first on every hero.
+      if (await preloadImage(HERO_FIRST_IMAGE)) {
+        if (!active) return
+        usable.push({ id: 'local-first', src: HERO_FIRST_IMAGE })
+        setSlides([...usable])
+        setActiveSlide(0)
+        setStatus('ready')
+      }
+
       try {
         const data = await api.heroSlides()
         if (!active) return
         const listed = unwrapList(data)
-          .filter((slide) => slide.image)
+          .filter((slide: HeroSlide) => slide.image)
           .slice()
           .sort((a, b) => a.order - b.order)
 
-        if (!listed.length) {
-          setSlides([])
-          setStatus('empty')
-          return
-        }
-
-        const usable: ReadySlide[] = []
         for (const slide of listed) {
           const ok = await preloadImage(slide.image)
           if (!active) return
           if (!ok) continue
-          usable.push({ ...slide, src: slide.image })
-          // Reveal as soon as the first real photo is ready — no green flash.
+          usable.push({ id: slide.id, src: slide.image })
           if (usable.length === 1) {
             setSlides([...usable])
             setActiveSlide(0)
@@ -76,13 +84,12 @@ export function HeroBackgroundSlides({ variant = 'page', onStatusChange }: Props
             setSlides([...usable])
           }
         }
-
-        if (!usable.length) {
-          setSlides([])
-          setStatus('empty')
-        }
       } catch {
-        if (!active) return
+        /* API optional when local first image already works */
+      }
+
+      if (!active) return
+      if (!usable.length) {
         setSlides([])
         setStatus('empty')
       }
@@ -97,15 +104,12 @@ export function HeroBackgroundSlides({ variant = 'page', onStatusChange }: Props
     if (status !== 'ready' || slides.length < 2) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
-    const enable = window.setTimeout(() => setCycling(true), 40)
+    // Hard cut every 4s — not a slideshow crossfade.
     const timer = window.setInterval(() => {
       setActiveSlide((index) => (index + 1) % slides.length)
-    }, HERO_BG_CROSSFADE_MS)
+    }, HERO_BG_HOLD_MS)
 
-    return () => {
-      window.clearTimeout(enable)
-      window.clearInterval(timer)
-    }
+    return () => window.clearInterval(timer)
   }, [status, slides.length])
 
   const rootClass = variant === 'home' ? 'hero__bg' : 'page-hero__slides'
@@ -115,11 +119,7 @@ export function HeroBackgroundSlides({ variant = 'page', onStatusChange }: Props
     <>
       <span ref={anchorRef} hidden aria-hidden="true" />
       {status === 'ready' && slides.length > 0 && (
-        <div
-          className={`${rootClass}${cycling ? ' is-cycling' : ''}`}
-          aria-hidden="true"
-          style={{ ['--hero-bg-crossfade' as string]: `${HERO_BG_CROSSFADE_MS}ms` }}
-        >
+        <div className={rootClass} aria-hidden="true">
           {slides.map((slide, index) => (
             <img
               key={slide.id}
@@ -127,7 +127,7 @@ export function HeroBackgroundSlides({ variant = 'page', onStatusChange }: Props
               src={slide.src}
               alt=""
               referrerPolicy="no-referrer"
-              loading="eager"
+              loading={index === 0 ? 'eager' : 'lazy'}
               decoding="async"
               fetchPriority={index === 0 ? 'high' : 'low'}
             />
