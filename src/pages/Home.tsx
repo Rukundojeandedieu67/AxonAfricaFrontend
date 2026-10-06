@@ -61,7 +61,7 @@ const seedModules = [
 
 export function HomePage() {
   const [partners, setPartners] = useState<Partner[]>([])
-  const [hasHeroBgImages, setHasHeroBgImages] = useState(false)
+  const [heroBgStatus, setHeroBgStatus] = useState<'loading' | 'ready' | 'empty'>('loading')
   const [heroBg, setHeroBg] = useState<string | null>(() => getHeroBackground())
   const [stats, setStats] = useState({
     scholarsReached: '—',
@@ -110,22 +110,29 @@ export function HomePage() {
     }
   }, [])
 
+  const showFallback = heroBgStatus === 'empty'
+  const showPhotos = heroBgStatus === 'ready'
+  const showCustomPhoto = showFallback && Boolean(heroBg)
+
   return (
     <div className="home">
       <section
-        className={`hero ${hasHeroBgImages ? 'hero--bg' : heroBg ? 'hero--photo' : ''}`}
+        className={[
+          'hero',
+          showPhotos ? 'hero--bg' : '',
+          showCustomPhoto ? 'hero--photo' : '',
+          showFallback && !heroBg ? 'hero--fallback' : '',
+          heroBgStatus === 'loading' ? 'hero--awaiting-bg' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         style={
-          heroBg && !hasHeroBgImages
-            ? { ['--hero-photo' as string]: `url(${heroBg})` }
-            : undefined
+          showCustomPhoto ? { ['--hero-photo' as string]: `url(${heroBg})` } : undefined
         }
       >
-        <HeroBackgroundSlides
-          variant="home"
-          onSlidesChange={(slides) => setHasHeroBgImages(slides.length > 0)}
-        />
-        <div className="hero__scrim" aria-hidden />
-        {!hasHeroBgImages && (
+        <HeroBackgroundSlides variant="home" onStatusChange={setHeroBgStatus} />
+        {(showPhotos || showCustomPhoto) && <div className="hero__scrim" aria-hidden />}
+        {showFallback && !heroBg && (
           <div className="hero__orbs" aria-hidden>
             <span />
             <span />

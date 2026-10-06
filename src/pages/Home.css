@@ -1,7 +1,7 @@
 .hero {
   position: relative;
   isolation: isolate;
-  background: linear-gradient(155deg, var(--field-green) 0%, var(--deep-green) 55%, #032802 100%);
+  background: #031a04;
   color: var(--white);
   padding: 3.25rem 0 4.25rem;
   min-height: calc(100svh - var(--header-h));
@@ -10,17 +10,29 @@
   overflow: hidden;
 }
 
+.hero--awaiting-bg {
+  background: #031a04;
+}
+
+.hero--fallback {
+  background: linear-gradient(155deg, var(--field-green) 0%, var(--deep-green) 55%, #032802 100%);
+}
+
 .hero--photo {
   background-image:
     linear-gradient(
       115deg,
-      color-mix(in srgb, var(--deep-green) 88%, #000) 0%,
-      color-mix(in srgb, var(--field-green) 55%, transparent) 42%,
-      color-mix(in srgb, #000 55%, transparent) 100%
+      color-mix(in srgb, var(--deep-green) 72%, #000) 0%,
+      color-mix(in srgb, var(--field-green) 35%, transparent) 42%,
+      color-mix(in srgb, #000 45%, transparent) 100%
     ),
     var(--hero-photo);
   background-size: cover;
   background-position: center;
+}
+
+.hero--bg {
+  background: #031a04;
 }
 
 .hero__bg {
@@ -39,40 +51,50 @@
   object-fit: cover;
   object-position: center;
   opacity: 0;
-  transform: scale(1.06);
-  transition: opacity var(--hero-bg-crossfade, 2400ms) linear;
+  transform: scale(1.04);
   will-change: opacity, transform;
 }
 
 .hero__bg-image.is-active {
   opacity: 1;
-  animation: hero-bg-drift var(--hero-bg-crossfade, 2400ms) linear forwards;
   z-index: 1;
+  animation: hero-bg-drift var(--hero-bg-crossfade, 2400ms) linear forwards;
+}
+
+.hero__bg.is-cycling .hero__bg-image {
+  transition: opacity var(--hero-bg-crossfade, 2400ms) linear;
 }
 
 @keyframes hero-bg-drift {
   from {
-    transform: scale(1.06) translate3d(0, 0, 0);
+    transform: scale(1.04) translate3d(0, 0, 0);
   }
   to {
-    transform: scale(1.12) translate3d(-1.5%, -1%, 0);
+    transform: scale(1.1) translate3d(-1.2%, -0.8%, 0);
   }
-}
-
-.hero--bg .hero__scrim {
-  background:
-    radial-gradient(ellipse 70% 60% at 15% 40%, color-mix(in srgb, var(--sun-gold) 16%, transparent), transparent 60%),
-    linear-gradient(115deg, color-mix(in srgb, var(--deep-green) 74%, transparent), color-mix(in srgb, #000 34%, transparent));
 }
 
 .hero__scrim {
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: 1;
   pointer-events: none;
-  background:
-    radial-gradient(ellipse 70% 60% at 15% 40%, color-mix(in srgb, var(--sun-gold) 18%, transparent), transparent 60%),
-    linear-gradient(180deg, transparent 55%, color-mix(in srgb, #000 35%, transparent));
+  background: linear-gradient(
+    115deg,
+    color-mix(in srgb, #031a04 62%, transparent) 0%,
+    color-mix(in srgb, #031a04 28%, transparent) 48%,
+    color-mix(in srgb, #000 42%, transparent) 100%
+  );
+}
+
+.hero--bg .hero__scrim,
+.hero--photo .hero__scrim {
+  background: linear-gradient(
+    115deg,
+    color-mix(in srgb, #031a04 58%, transparent) 0%,
+    color-mix(in srgb, #031a04 22%, transparent) 45%,
+    color-mix(in srgb, #000 38%, transparent) 100%
+  );
 }
 
 .hero__orbs {
@@ -159,7 +181,7 @@
 
 .hero__grid {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   display: grid;
   gap: 2.25rem;
   align-items: center;
