@@ -1,360 +1,648 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { ApiError, api, unwrapList } from '../api/client'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import {
+  ApiError,
+  api,
+  unwrapList,
+  type Alumni,
+  type AwardCategory,
+  type AwardWinner,
+  type Cohort,
+  type Event,
+  type ImpactReport,
+  type ImpactStat,
+  type Innovator,
+  type NewsPost,
+  type Partner,
+  type PressKitItem,
+  type Program,
+  type ProgramStage,
+  type TeamMember,
+} from '../api/client'
 import { HeroBackgroundSlides } from '../components/HeroBackgroundSlides'
 import './Explore.css'
 
-type ApiRecord = {
-  key: string
-  title: string
-  description: string
-  detail: () => Promise<unknown>
-  kind?: 'event'
-}
+type SectionId =
+  | 'programs'
+  | 'journey'
+  | 'innovators'
+  | 'alumni'
+  | 'cohorts'
+  | 'events'
+  | 'team'
+  | 'partners'
+  | 'news'
+  | 'awards'
+  | 'resources'
 
-type ApiSection = {
+type ExploreItem = {
   id: string
+  section: SectionId
   title: string
-  description: string
-  records: ApiRecord[]
-  error?: string
+  summary: string
+  meta?: string
+  image?: string | null
+  slug?: string
+  detailId?: number
 }
 
-type SelectedRecord = {
-  record: ApiRecord
-  data: unknown
+type ExploreSection = {
+  id: SectionId
+  title: string
+  lead: string
+  items: ExploreItem[]
 }
 
-const API_REFRESH_INTERVAL = 60_000
+const REFRESH_MS = 60_000
+const HIDDEN_KEYS = new Set([
+  'id',
+  'slug',
+  'order',
+  'kind',
+  'code',
+  'category',
+  'innovator',
+  'is_public',
+  'group',
+  'is_featured',
+])
 
-function textValue(value: unknown): string {
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return String(value)
-  }
-  return ''
+function formatDate(value?: string | null) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
-function DetailValue({ name, value }: { name: string; value: unknown }) {
-  if (value === null || value === undefined || value === '') return null
-  if (Array.isArray(value)) {
-    return (
-      <div className="explore-detail__field">
-        <strong>{name.replaceAll('_', ' ')}</strong>
-        {value.length ? (
-          <ul>
-            {value.map((entry, index) => (
-              <li key={index}>
-                {typeof entry === 'object' && entry !== null
-                  ? Object.values(entry).map(textValue).filter(Boolean).join(' · ')
-                  : textValue(entry)}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>None listed.</p>
-        )}
-      </div>
-    )
-  }
-  if (typeof value === 'object') {
-    return (
-      <div className="explore-detail__field">
-        <strong>{name.replaceAll('_', ' ')}</strong>
-        <p>{Object.values(value).map(textValue).filter(Boolean).join(' · ')}</p>
-      </div>
-    )
-  }
-  const valueText = textValue(value)
-  const fieldName = name.toLowerCase()
-  if (
-    typeof value === 'string' &&
-    /^(https?:\/\/|\/)/.test(value) &&
-    /(image|photo|logo|cover)/.test(fieldName)
-  ) {
-    return (
-      <div className="explore-detail__field">
-        <strong>{name.replaceAll('_', ' ')}</strong>
-        <img className="explore-detail__image" src={value} alt="" />
-      </div>
-    )
-  }
-  if (typeof value === 'string' && /^(https?:\/\/|\/)/.test(value) && /file/.test(fieldName)) {
-    return (
-      <div className="explore-detail__field">
-        <strong>{name.replaceAll('_', ' ')}</strong>
-        <a className="btn btn--outline-dark" href={value} target="_blank" rel="noreferrer">
-          Open document
-        </a>
-      </div>
-    )
-  }
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  if (children === null || children === undefined || children === '') return null
   return (
     <div className="explore-detail__field">
-      <strong>{name.replaceAll('_', ' ')}</strong>
-      <p>{valueText}</p>
+      <strong>{label}</strong>
+      <div>{children}</div>
     </div>
   )
 }
 
-function RecordDetail({ data }: { data: unknown }) {
-  if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-    return <pre className="explore-detail__raw">{JSON.stringify(data, null, 2)}</pre>
-  }
+function textFields(data: Record<string, unknown>, labels: Record<string, string>) {
+  return Object.entries(labels).flatMap(([key, label]) => {
+    const value = data[key]
+    if (value === null || value === undefined || value === '') return []
+    if (typeof value === 'string' && /^(https?:\/\/|\/)/.test(value)) {
+      if (/(file)/i.test(key)) {
+        return [
+          <Field key={key} label={label}>
+            <a className="btn btn--outline-dark" href={value} target="_blank" rel="noreferrer">
+              Open document
+            </a>
+          </Field>,
+        ]
+      }
+      if (/(image|photo|logo|cover)/i.test(key)) {
+        return [
+          <Field key={key} label={label}>
+            <img className="explore-detail__image" src={value} alt="" />
+          </Field>,
+        ]
+      }
+    }
+    if (typeof value === 'object') return []
+    return [
+      <Field key={key} label={label}>
+        <p>{String(value)}</p>
+      </Field>,
+    ]
+  })
+}
+
+function ModulesList({ stages }: { stages: ProgramStage[] }) {
+  return (
+    <div className="explore-detail__stages">
+      {stages
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .map((stage) => (
+          <article key={stage.id} className="explore-detail__stage">
+            <h4>
+              {stage.name}
+              {stage.subtitle ? ` — ${stage.subtitle}` : ''}
+            </h4>
+            {stage.description && <p>{stage.description}</p>}
+            {stage.modules.length > 0 && (
+              <ul>
+                {stage.modules
+                  .slice()
+                  .sort((a, b) => a.order - b.order)
+                  .map((module) => (
+                    <li key={module.id}>
+                      <strong>{module.title}</strong>
+                      {module.description ? ` — ${module.description}` : ''}
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </article>
+        ))}
+    </div>
+  )
+}
+
+function GenericDetail({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="explore-detail__fields">
-      {Object.entries(data).map(([name, value]) => (
-        <DetailValue key={name} name={name} value={value} />
-      ))}
+      {Object.entries(data)
+        .filter(([key, value]) => {
+          if (HIDDEN_KEYS.has(key)) return false
+          if (value === null || value === undefined || value === '') return false
+          if (Array.isArray(value) || (typeof value === 'object' && value !== null)) return false
+          return true
+        })
+        .map(([key, value]) => {
+          const label = key.replaceAll('_', ' ')
+          if (typeof value === 'string' && /^(https?:\/\/|\/)/.test(value)) {
+            if (/file/i.test(key)) {
+              return (
+                <Field key={key} label={label}>
+                  <a className="btn btn--outline-dark" href={value} target="_blank" rel="noreferrer">
+                    Open document
+                  </a>
+                </Field>
+              )
+            }
+            if (/(image|photo|logo|cover)/i.test(key)) {
+              return (
+                <Field key={key} label={label}>
+                  <img className="explore-detail__image" src={value} alt="" />
+                </Field>
+              )
+            }
+          }
+          return (
+            <Field key={key} label={label}>
+              <p>{String(value)}</p>
+            </Field>
+          )
+        })}
     </div>
   )
 }
 
-function record<T extends { id: number }>(
-  item: T,
-  title: string,
-  description: string,
-  detail: (id: number) => Promise<unknown>,
-): ApiRecord {
-  return { key: String(item.id), title, description, detail: () => detail(item.id) }
-}
+async function loadCatalog() {
+  const [
+    programs,
+    stages,
+    innovators,
+    alumni,
+    cohorts,
+    events,
+    team,
+    partners,
+    news,
+    winners,
+    categories,
+    pressKit,
+    reports,
+    stats,
+    breakdown,
+  ] = await Promise.all([
+    api.programs().then(unwrapList).catch(() => [] as Program[]),
+    api.stages().then(unwrapList).catch(() => [] as ProgramStage[]),
+    api.innovators().then(unwrapList).catch(() => [] as Innovator[]),
+    api.alumni().then(unwrapList).catch(() => [] as Alumni[]),
+    api.cohorts().then(unwrapList).catch(() => [] as Cohort[]),
+    api.events().then(unwrapList).catch(() => [] as Event[]),
+    api.team().then(unwrapList).catch(() => [] as TeamMember[]),
+    api.partners().then(unwrapList).catch(() => [] as Partner[]),
+    api.news().then(unwrapList).catch(() => [] as NewsPost[]),
+    api.awardWinners().then(unwrapList).catch(() => [] as AwardWinner[]),
+    api.awardCategories().then(unwrapList).catch(() => [] as AwardCategory[]),
+    api.pressKit().then(unwrapList).catch(() => [] as PressKitItem[]),
+    api.reports().then(unwrapList).catch(() => [] as ImpactReport[]),
+    api.impactStats().catch(() => [] as ImpactStat[]),
+    api.impactBreakdown().catch(() => null),
+  ])
 
-async function loadSections(): Promise<ApiSection[]> {
-  const loaders: { id: string; title: string; description: string; load: () => Promise<ApiRecord[]> }[] = [
-    {
-      id: 'api-status',
-      title: 'API status',
-      description: 'Live status from the documented API health endpoint.',
-      load: async () => {
-        const status = await api.health()
-        return [{ key: 'health', title: status.status, description: 'API health check', detail: api.health }]
-      },
-    },
-    {
-      id: 'events',
-      title: 'Events',
-      description: 'Published events and registration details.',
-      load: async () =>
-        unwrapList(await api.events()).map((item) => ({
-          key: item.slug,
-          title: item.title,
-          description: [item.city, item.country, item.kind].filter(Boolean).join(' · '),
-          detail: () => api.event(item.slug),
-          kind: 'event' as const,
-        })),
-    },
-    {
-      id: 'speakers',
-      title: 'Speakers',
-      description: 'Speakers featured at published events.',
-      load: async () =>
-        unwrapList(await api.speakers()).map((item) =>
-          record(item, item.full_name, [item.title, item.organization].filter(Boolean).join(' · '), api.speaker),
-        ),
-    },
-    {
-      id: 'award-categories',
-      title: 'Award categories',
-      description: 'Award categories and their published criteria.',
-      load: async () =>
-        unwrapList(await api.awardCategories()).map((item) =>
-          record(item, item.name, item.description || item.criteria, api.awardCategory),
-        ),
-    },
-    {
-      id: 'award-winners',
-      title: 'Award winners',
-      description: 'Published winners and their legacy statements.',
-      load: async () =>
-        unwrapList(await api.awardWinners()).map((item) =>
-          record(item, item.display_name, `${item.category_name} · ${item.year}`, api.awardWinner),
-        ),
-    },
-    {
-      id: 'cohorts',
-      title: 'Cohorts',
-      description: 'Public cohorts and their innovators.',
-      load: async () =>
-        unwrapList(await api.cohorts()).map((item) => ({
-          key: item.slug,
-          title: item.name,
-          description: `${item.year} · ${item.status}`,
-          detail: () => api.cohort(item.slug),
-        })),
-    },
-    {
-      id: 'alumni',
-      title: 'Alumni',
-      description: 'Public alumni profiles.',
-      load: async () =>
-        unwrapList(await api.alumni()).map((item) =>
-          record(item, item.full_name, `${item.cohort_name} · ${item.cohort_year}`, api.alumnus),
-        ),
-    },
-    {
-      id: 'innovators',
-      title: 'Innovators',
-      description: 'Public innovator profiles.',
-      load: async () =>
-        unwrapList(await api.innovators()).map((item) =>
-          record(item, item.full_name, item.project_title || item.current_stage || '', api.innovator),
-        ),
-    },
-    {
+  const sections: ExploreSection[] = []
+
+  if (programs.length) {
+    sections.push({
       id: 'programs',
       title: 'Programs',
-      description: 'Active programs with their stages and modules.',
-      load: async () =>
-        unwrapList(await api.programs()).map((item) => ({
-          key: item.slug,
-          title: item.name,
-          description: item.tagline || item.description,
-          detail: () => api.program(item.slug),
+      lead: 'What AxonAfrica runs — from classroom insight to institutional impact.',
+      items: programs
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .map((program) => ({
+          id: `program-${program.slug}`,
+          section: 'programs' as const,
+          title: program.name,
+          summary: program.tagline || program.description,
+          meta: program.kind.replaceAll('_', ' '),
+          slug: program.slug,
         })),
-    },
-    {
-      id: 'stages',
-      title: 'Program stages',
-      description: 'Published program stages and modules.',
-      load: async () =>
-        unwrapList(await api.stages()).map((item) =>
-          record(item, item.name, item.subtitle || item.description, api.stage),
-        ),
-    },
-    {
-      id: 'news',
-      title: 'News',
-      description: 'Published news and stories.',
-      load: async () =>
-        unwrapList(await api.news()).map((item) => ({
-          key: item.slug,
-          title: item.title,
-          description: item.excerpt || item.category || '',
-          detail: () => api.newsPost(item.slug),
+    })
+  }
+
+  if (stages.length) {
+    sections.push({
+      id: 'journey',
+      title: 'The journey',
+      lead: 'Seed, Plant, and Canopy — the stages every innovator moves through.',
+      items: stages
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .map((stage) => ({
+          id: `stage-${stage.id}`,
+          section: 'journey' as const,
+          title: stage.name,
+          summary: stage.subtitle || stage.description,
+          meta: stage.modules.length ? `${stage.modules.length} modules` : undefined,
+          detailId: stage.id,
         })),
-    },
-    {
-      id: 'partners',
-      title: 'Partners',
-      description: 'Organizations supporting AxonAfrica.',
-      load: async () =>
-        unwrapList(await api.partners()).map((item) =>
-          record(item, item.name, [item.type, item.country].filter(Boolean).join(' · '), api.partner),
-        ),
-    },
-    {
+    })
+  }
+
+  if (innovators.length) {
+    sections.push({
+      id: 'innovators',
+      title: 'Innovators',
+      lead: 'Young health leaders building solutions in the open.',
+      items: innovators.map((person) => ({
+        id: `innovator-${person.id}`,
+        section: 'innovators' as const,
+        title: person.full_name,
+        summary: person.project_title || person.project_summary || person.current_stage || '',
+        meta: [person.university, person.country].filter(Boolean).join(' · '),
+        image: person.photo,
+        detailId: person.id,
+      })),
+    })
+  }
+
+  if (alumni.length) {
+    sections.push({
+      id: 'alumni',
+      title: 'Alumni',
+      lead: 'Innovators who continue building beyond their cohort.',
+      items: alumni.map((person) => ({
+        id: `alumni-${person.id}`,
+        section: 'alumni' as const,
+        title: person.full_name,
+        summary: person.project_title || '',
+        meta: `${person.cohort_name} · ${person.cohort_year}`,
+        image: person.photo,
+        detailId: person.id,
+      })),
+    })
+  }
+
+  if (cohorts.length) {
+    sections.push({
+      id: 'cohorts',
+      title: 'Cohorts',
+      lead: 'Public cohorts and the innovators inside them.',
+      items: cohorts.map((cohort) => ({
+        id: `cohort-${cohort.slug}`,
+        section: 'cohorts' as const,
+        title: cohort.name,
+        summary: cohort.summary,
+        meta: `${cohort.year} · ${cohort.status}`,
+        slug: cohort.slug,
+      })),
+    })
+  }
+
+  if (events.length) {
+    sections.push({
+      id: 'events',
+      title: 'Events',
+      lead: 'Summits, ceremonies, and gatherings where innovators meet institutions.',
+      items: events.map((event) => ({
+        id: `event-${event.slug}`,
+        section: 'events' as const,
+        title: event.title,
+        summary: [event.city, event.country].filter(Boolean).join(' · ') || event.kind,
+        meta: formatDate(event.starts_at),
+        image: event.cover_image,
+        slug: event.slug,
+      })),
+    })
+  }
+
+  if (team.length) {
+    sections.push({
       id: 'team',
       title: 'Team',
-      description: 'Team and governance profiles.',
-      load: async () =>
-        unwrapList(await api.team()).map((item) =>
-          record(item, item.full_name, item.role_title, api.teamMember),
-        ),
-    },
-    {
-      id: 'press-kit',
-      title: 'Press kit',
-      description: 'Downloadable press kit assets.',
-      load: async () =>
-        unwrapList(await api.pressKit()).map((item) =>
-          record(item, item.title, item.description, api.pressKitItem),
-        ),
-    },
-    {
-      id: 'impact-reports',
-      title: 'Impact reports',
-      description: 'Published reports from the AxonAfrica API.',
-      load: async () =>
-        unwrapList(await api.reports()).map((item) =>
-          record(item, item.title, `${item.year} · ${item.summary}`, api.report),
-        ),
-    },
-    {
-      id: 'hero-slides',
-      title: 'Hero images',
-      description: 'Active background images managed by the AxonAfrica team.',
-      load: async () =>
-        unwrapList(await api.heroSlides()).map((item) =>
-          record(item, item.alt_text || `Slide ${item.order}`, `Slide ${item.order}`, api.heroSlide),
-        ),
-    },
-  ]
+      lead: 'The people building AxonAfrica.',
+      items: team.map((member) => ({
+        id: `team-${member.id}`,
+        section: 'team' as const,
+        title: member.full_name,
+        summary: member.role_title,
+        meta: member.group,
+        image: member.photo,
+        detailId: member.id,
+      })),
+    })
+  }
 
-  const results = await Promise.all(
-    loaders.map(async (section) => {
-      try {
-        return { ...section, records: await section.load() }
-      } catch (error) {
-        return {
-          ...section,
-          records: [],
-          error:
-            error instanceof ApiError
-              ? error.message
-              : 'This API section could not be loaded. Please try again.',
-        }
-      }
-    }),
-  )
-  return results.map(({ load: _load, ...section }) => section)
+  if (partners.length) {
+    sections.push({
+      id: 'partners',
+      title: 'Partners',
+      lead: 'Institutions and organizations opening doors for innovators.',
+      items: partners.map((partner) => ({
+        id: `partner-${partner.id}`,
+        section: 'partners' as const,
+        title: partner.name,
+        summary: [partner.type, partner.country].filter(Boolean).join(' · '),
+        image: partner.logo,
+        detailId: partner.id,
+      })),
+    })
+  }
+
+  if (news.length) {
+    sections.push({
+      id: 'news',
+      title: 'Stories',
+      lead: 'News and updates from across the network.',
+      items: news.map((post) => ({
+        id: `news-${post.slug}`,
+        section: 'news' as const,
+        title: post.title,
+        summary: post.excerpt || '',
+        meta: formatDate(post.published_at),
+        image: post.cover_image,
+        slug: post.slug,
+      })),
+    })
+  }
+
+  if (winners.length) {
+    sections.push({
+      id: 'awards',
+      title: 'Award winners',
+      lead: 'Young innovators recognized for lasting contribution.',
+      items: winners.map((winner) => ({
+        id: `award-${winner.id}`,
+        section: 'awards' as const,
+        title: winner.display_name,
+        summary: winner.legacy_statement,
+        meta: `${winner.category_name} · ${winner.year}`,
+        image: winner.photo,
+        detailId: winner.id,
+      })),
+    })
+  }
+
+  const resources: ExploreItem[] = [
+    ...pressKit.map((item) => ({
+      id: `press-${item.id}`,
+      section: 'resources' as const,
+      title: item.title,
+      summary: item.description,
+      meta: 'Press kit',
+      detailId: item.id,
+    })),
+    ...reports.map((item) => ({
+      id: `report-${item.id}`,
+      section: 'resources' as const,
+      title: item.title,
+      summary: item.summary,
+      meta: String(item.year),
+      detailId: item.id,
+    })),
+  ]
+  if (resources.length) {
+    sections.push({
+      id: 'resources',
+      title: 'Resources',
+      lead: 'Press materials and impact reports you can share.',
+      items: resources,
+    })
+  }
+
+  return { sections, awardCategories: categories, stats, breakdown }
 }
 
 export function ExplorePage() {
-  const [sections, setSections] = useState<ApiSection[]>([])
+  const [sections, setSections] = useState<ExploreSection[]>([])
+  const [stats, setStats] = useState<ImpactStat[]>([])
+  const [breakdown, setBreakdown] = useState<Awaited<ReturnType<typeof api.impactBreakdown>> | null>(
+    null,
+  )
+  const [awardCategories, setAwardCategories] = useState<AwardCategory[]>([])
+  const [activeSection, setActiveSection] = useState<SectionId | 'impact' | 'nominate' | 'all'>('all')
   const [loading, setLoading] = useState(true)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [selected, setSelected] = useState<SelectedRecord | null>(null)
+  const [selectedItem, setSelectedItem] = useState<ExploreItem | null>(null)
+  const [detailBody, setDetailBody] = useState<ReactNode>(null)
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [detailError, setDetailError] = useState('')
-  const [nominationMessage, setNominationMessage] = useState('')
-  const [nominationError, setNominationError] = useState('')
   const [eventMessage, setEventMessage] = useState('')
   const [eventError, setEventError] = useState('')
+  const [nominationMessage, setNominationMessage] = useState('')
+  const [nominationError, setNominationError] = useState('')
 
   useEffect(() => {
-    let active = true
+    let alive = true
     let inFlight = false
 
     async function refresh() {
       if (inFlight || document.visibilityState === 'hidden') return
       inFlight = true
       try {
-        const loadedSections = await loadSections()
-        if (active) {
-          setSections(loadedSections)
-          setLastUpdated(new Date())
-        }
+        const catalog = await loadCatalog()
+        if (!alive) return
+        setSections(catalog.sections)
+        setStats(catalog.stats)
+        setBreakdown(catalog.breakdown)
+        setAwardCategories(catalog.awardCategories)
       } finally {
         inFlight = false
-        if (active) setLoading(false)
+        if (alive) setLoading(false)
       }
     }
 
-    function refreshWhenVisible() {
+    void refresh()
+    const timer = window.setInterval(() => void refresh(), REFRESH_MS)
+    const onVisible = () => {
       if (document.visibilityState === 'visible') void refresh()
     }
-
-    void refresh()
-    const timer = window.setInterval(() => void refresh(), API_REFRESH_INTERVAL)
-    document.addEventListener('visibilitychange', refreshWhenVisible)
-    window.addEventListener('focus', refreshWhenVisible)
+    document.addEventListener('visibilitychange', onVisible)
     return () => {
-      active = false
+      alive = false
       window.clearInterval(timer)
-      document.removeEventListener('visibilitychange', refreshWhenVisible)
-      window.removeEventListener('focus', refreshWhenVisible)
+      document.removeEventListener('visibilitychange', onVisible)
     }
   }, [])
 
-  async function selectRecord(item: ApiRecord) {
-    setSelected(null)
+  const visibleSections = useMemo(() => {
+    if (activeSection === 'all' || activeSection === 'impact' || activeSection === 'nominate') {
+      return sections
+    }
+    return sections.filter((section) => section.id === activeSection)
+  }, [activeSection, sections])
+
+  const totalItems = sections.reduce((sum, section) => sum + section.items.length, 0)
+
+  async function openItem(item: ExploreItem) {
     setDetailError('')
-    setNominationMessage('')
-    setNominationError('')
     setEventMessage('')
     setEventError('')
+    setSelectedEvent(null)
+    setDetailBody(null)
+    setSelectedItem(item)
+
     try {
-      setSelected({ record: item, data: await item.detail() })
-    } catch (error) {
-      setDetailError(
-        error instanceof ApiError ? error.message : 'Could not load this API record.',
+      switch (item.section) {
+        case 'programs': {
+          const program = await api.program(item.slug!)
+          setDetailBody(
+            <div className="explore-detail__fields">
+              {textFields(program as unknown as Record<string, unknown>, {
+                tagline: 'Focus',
+                description: 'About',
+              })}
+              {program.stages && program.stages.length > 0 && (
+                <div className="explore-detail__field explore-detail__field--wide">
+                  <strong>Pathway</strong>
+                  <ModulesList stages={program.stages} />
+                </div>
+              )}
+            </div>,
+          )
+          break
+        }
+        case 'journey': {
+          const stage = await api.stage(item.detailId!)
+          setDetailBody(
+            <div className="explore-detail__fields">
+              {textFields(stage as unknown as Record<string, unknown>, {
+                subtitle: 'Focus',
+                description: 'About',
+              })}
+              {stage.modules.length > 0 && (
+                <div className="explore-detail__field explore-detail__field--wide">
+                  <strong>Modules</strong>
+                  <ul>
+                    {stage.modules
+                      .slice()
+                      .sort((a, b) => a.order - b.order)
+                      .map((module) => (
+                        <li key={module.id}>
+                          <strong>{module.title}</strong>
+                          {module.description ? ` — ${module.description}` : ''}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+            </div>,
+          )
+          break
+        }
+        case 'innovators':
+          setDetailBody(
+            <GenericDetail
+              data={(await api.innovator(item.detailId!)) as unknown as Record<string, unknown>}
+            />,
+          )
+          break
+        case 'alumni':
+          setDetailBody(
+            <GenericDetail
+              data={(await api.alumnus(item.detailId!)) as unknown as Record<string, unknown>}
+            />,
+          )
+          break
+        case 'cohorts':
+          setDetailBody(
+            <GenericDetail
+              data={(await api.cohort(item.slug!)) as unknown as Record<string, unknown>}
+            />,
+          )
+          break
+        case 'events': {
+          const event = await api.event(item.slug!)
+          setSelectedEvent(event)
+          break
+        }
+        case 'team':
+          setDetailBody(
+            <GenericDetail
+              data={(await api.teamMember(item.detailId!)) as unknown as Record<string, unknown>}
+            />,
+          )
+          break
+        case 'partners':
+          setDetailBody(
+            <GenericDetail
+              data={(await api.partner(item.detailId!)) as unknown as Record<string, unknown>}
+            />,
+          )
+          break
+        case 'news':
+          setDetailBody(
+            <GenericDetail
+              data={(await api.newsPost(item.slug!)) as unknown as Record<string, unknown>}
+            />,
+          )
+          break
+        case 'awards':
+          setDetailBody(
+            <GenericDetail
+              data={(await api.awardWinner(item.detailId!)) as unknown as Record<string, unknown>}
+            />,
+          )
+          break
+        case 'resources':
+          if (item.id.startsWith('press-')) {
+            setDetailBody(
+              <GenericDetail
+                data={(await api.pressKitItem(item.detailId!)) as unknown as Record<string, unknown>}
+              />,
+            )
+          } else {
+            setDetailBody(
+              <GenericDetail
+                data={(await api.report(item.detailId!)) as unknown as Record<string, unknown>}
+              />,
+            )
+          }
+          break
+      }
+    } catch (cause) {
+      setSelectedItem(null)
+      setDetailError(cause instanceof ApiError ? cause.message : 'Could not load this item.')
+    }
+  }
+
+  async function submitEventRegistration(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!selectedEvent) return
+    const form = event.currentTarget
+    const formData = new FormData(form)
+    setEventError('')
+    setEventMessage('')
+    try {
+      const result = await api.registerForEvent(selectedEvent.slug, {
+        full_name: String(formData.get('full_name')),
+        email: String(formData.get('email')),
+        organization: String(formData.get('organization')),
+        role: String(formData.get('role')) as
+          | 'innovator'
+          | 'institution'
+          | 'funder'
+          | 'mentor'
+          | 'media'
+          | 'other',
+      })
+      setEventMessage(result.message)
+      form.reset()
+    } catch (cause) {
+      setEventError(
+        cause instanceof ApiError ? cause.message : 'Your event registration could not be submitted.',
       )
     }
   }
@@ -376,40 +664,16 @@ export function ExplorePage() {
       })
       setNominationMessage(result.message)
       form.reset()
-    } catch (error) {
+    } catch (cause) {
       setNominationError(
-        error instanceof ApiError ? error.message : 'Your nomination could not be submitted.',
+        cause instanceof ApiError ? cause.message : 'Your nomination could not be submitted.',
       )
     }
   }
 
-  async function submitEventRegistration(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!selected || selected.record.kind !== 'event') return
-    const form = event.currentTarget
-    const formData = new FormData(form)
-    setEventError('')
-    setEventMessage('')
-    try {
-      const result = await api.registerForEvent(String((selected.data as { slug: string }).slug), {
-        full_name: String(formData.get('full_name')),
-        email: String(formData.get('email')),
-        organization: String(formData.get('organization')),
-        role: String(formData.get('role')) as 'innovator' | 'institution' | 'funder' | 'mentor' | 'media' | 'other',
-      })
-      setEventMessage(result.message)
-      form.reset()
-    } catch (error) {
-      setEventError(
-        error instanceof ApiError ? error.message : 'Your event registration could not be submitted.',
-      )
-    }
-  }
-
-  const awardCategories = sections.find((section) => section.id === 'award-categories')
-  const categories = awardCategories?.records ?? []
-  const publishedRecords = sections.reduce((total, section) => total + section.records.length, 0)
-  const liveSections = sections.filter((section) => !section.error && section.records.length > 0).length
+  const showImpact = activeSection === 'all' || activeSection === 'impact'
+  const showNominate =
+    awardCategories.length > 0 && (activeSection === 'all' || activeSection === 'nominate')
 
   return (
     <>
@@ -418,286 +682,338 @@ export function ExplorePage() {
         <div className="container">
           <div className="page-hero__content">
             <div className="page-hero__copy">
-              <p className="eyebrow eyebrow--on-dark">Explore AxonAfrica</p>
-              <h1>Programs, people, events, and impact.</h1>
-              <p>Explore public information published by the AxonAfrica API.</p>
+              <p className="eyebrow eyebrow--on-dark">Explore</p>
+              <h1>Meet the work in motion.</h1>
+              <p>
+                Browse programs, the innovator journey, people, and impact — only what AxonAfrica has
+                published so far.
+              </p>
             </div>
-
             <div className="card explore-hero-panel">
-              <p className="eyebrow eyebrow--on-dark">Live ecosystem</p>
+              <p className="eyebrow eyebrow--on-dark">Now live</p>
               <div className="explore-stat-grid">
                 <div>
-                  <strong>{liveSections}</strong>
-                  <span>sections live</span>
+                  <strong>{sections.length}</strong>
+                  <span>collections</span>
                 </div>
                 <div>
-                  <strong>{publishedRecords}</strong>
-                  <span>public records</span>
+                  <strong>{totalItems}</strong>
+                  <span>published</span>
                 </div>
                 <div>
-                  <strong>{lastUpdated ? lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'sync'}</strong>
-                  <span>last refresh</span>
+                  <strong>{stats.length || '—'}</strong>
+                  <span>impact stats</span>
                 </div>
               </div>
               <ul className="explore-hero-list">
-                <li>Programs and cohorts</li>
-                <li>Innovators and alumni</li>
-                <li>Events and impact data</li>
+                <li>Programs &amp; journey stages</li>
+                <li>People when profiles go live</li>
+                <li>Impact as it is measured</li>
               </ul>
             </div>
           </div>
         </div>
       </section>
+
       <section className="section">
         <div className="container">
-          <div className="explore-summary">
-            <div className="card explore-summary__card">
-              <div>
-                <p className="eyebrow eyebrow--leaf">Public data</p>
-                <h2>Explore the AxonAfrica ecosystem</h2>
-              </div>
-              <div className="explore-summary__meta">
-                <span>{liveSections} active sections</span>
-                <span>{publishedRecords} records</span>
-              </div>
-            </div>
-          </div>
-
-          <nav className="explore-nav" aria-label="Explore API sections">
-            {[
-              {
-                label: 'Programs',
-                items: ['events', 'programs', 'stages', 'cohorts', 'news'],
-              },
-              {
-                label: 'People',
-                items: ['speakers', 'team', 'alumni', 'innovators', 'award-winners'],
-              },
-              {
-                label: 'Insights',
-                items: ['award-categories', 'press-kit', 'impact-reports', 'hero-slides'],
-              },
-              {
-                label: 'Quick links',
-                items: ['impact', 'nominate'],
-              },
-            ].map((group) => {
-              const visibleItems = group.items
-                .map((itemId) => {
-                  if (itemId === 'impact') return { id: 'impact', title: 'Impact' }
-                  if (itemId === 'nominate') return { id: 'nominate', title: 'Nominate' }
-                  return sections.find((section) => section.id === itemId)
-                })
-                .filter((item): item is { id: string; title: string } => Boolean(item))
-
-              if (!visibleItems.length) return null
-
-              return (
-                <details className="explore-nav__group" key={group.label}>
-                  <summary className="explore-nav__trigger">
-                    {group.label}
-                    <span className="explore-nav__chevron" aria-hidden="true" />
-                  </summary>
-                  <div className="explore-nav__menu">
-                    {visibleItems.map((item) => (
-                      <a key={item.id} href={`#${item.id}`}>
-                        {item.title}
-                      </a>
-                    ))}
-                  </div>
-                </details>
-              )
-            })}
+          <nav className="explore-filters" aria-label="Explore collections">
+            <button
+              type="button"
+              className={activeSection === 'all' ? 'is-active' : ''}
+              onClick={() => setActiveSection('all')}
+            >
+              All
+            </button>
+            {sections.map((section) => (
+              <button
+                key={section.id}
+                type="button"
+                className={activeSection === section.id ? 'is-active' : ''}
+                onClick={() => setActiveSection(section.id)}
+              >
+                {section.title}
+                <span>{section.items.length}</span>
+              </button>
+            ))}
+            {stats.length > 0 && (
+              <button
+                type="button"
+                className={activeSection === 'impact' ? 'is-active' : ''}
+                onClick={() => setActiveSection('impact')}
+              >
+                Impact
+              </button>
+            )}
+            {awardCategories.length > 0 && (
+              <button
+                type="button"
+                className={activeSection === 'nominate' ? 'is-active' : ''}
+                onClick={() => setActiveSection('nominate')}
+              >
+                Nominate
+              </button>
+            )}
           </nav>
 
-          {loading && <p role="status">Loading public API content…</p>}
-          {!loading && (
-            <p className="section-lead" role="status">
-              API content updates automatically every minute
-              {lastUpdated && ` · Last updated ${lastUpdated.toLocaleTimeString()}`}.
-            </p>
+          {loading && <p role="status">Loading published content…</p>}
+
+          {!loading && sections.length === 0 && (
+            <div className="card card--soft">
+              <h2 style={{ color: 'var(--heading-color)' }}>Nothing published yet</h2>
+              <p>
+                Explore will fill in as programs, people, and stories go live on the AxonAfrica API.
+              </p>
+              <Link to="/program" className="btn btn--gold">
+                See the program
+              </Link>
+            </div>
           )}
+
           {!loading &&
-            sections.map((section) => (
+            (activeSection === 'all' ||
+              (activeSection !== 'impact' && activeSection !== 'nominate')) &&
+            visibleSections.map((section) => (
               <section className="explore-section" id={section.id} key={section.id}>
                 <h2 className="section-title">{section.title}</h2>
-                <p className="section-lead">{section.description}</p>
-                {section.error ? (
-                  <p className="form-error" role="alert">{section.error}</p>
-                ) : section.records.length ? (
-                  <div className="grid-3 explore-section__grid">
-                    {section.records.map((item) => (
-                      <article className="card explore-card" key={item.key}>
-                        <span className="explore-card__eyebrow">{section.title}</span>
-                        <h3>{item.title}</h3>
-                        <p>{item.description}</p>
-                        <button
-                          type="button"
-                          className="btn btn--outline-dark"
-                          onClick={() => void selectRecord(item)}
-                        >
-                          View details
-                        </button>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <p>There are no published records in this section yet.</p>
-                )}
+                <p className="section-lead">{section.lead}</p>
+                <div className="grid-3 explore-section__grid">
+                  {section.items.map((item) => (
+                    <article className="card explore-card" key={item.id}>
+                      {item.image ? (
+                        <img className="explore-card__image" src={item.image} alt="" loading="lazy" />
+                      ) : null}
+                      {item.meta && <span className="explore-card__eyebrow">{item.meta}</span>}
+                      <h3>{item.title}</h3>
+                      {item.summary && <p>{item.summary}</p>}
+                      <button
+                        type="button"
+                        className="btn btn--outline-dark"
+                        onClick={() => void openItem(item)}
+                      >
+                        View
+                      </button>
+                    </article>
+                  ))}
+                </div>
               </section>
             ))}
 
-          {selected && (
+          {selectedItem && (
             <section className="card explore-detail" aria-live="polite">
-              <h2>{selected.record.title}</h2>
-              <button
-                type="button"
-                className="btn btn--outline-dark"
-                onClick={() => setSelected(null)}
-              >
-                Close details
-              </button>
-              <RecordDetail data={selected.data} />
-              {selected.record.kind === 'event' &&
-                (selected.data as { registration_open?: boolean }).registration_open && (
-                  <form className="form-stack explore-form" onSubmit={submitEventRegistration}>
-                    <h3>Register for this event</h3>
-                    <label>Full name<input name="full_name" required /></label>
-                    <label>Email<input name="email" type="email" required /></label>
-                    <label>Organization<input name="organization" /></label>
-                    <label>
-                      Your role
-                      <select name="role" required defaultValue="other">
-                        <option value="innovator">Innovator</option>
-                        <option value="institution">Institution</option>
-                        <option value="funder">Funder</option>
-                        <option value="mentor">Mentor</option>
-                        <option value="media">Media</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </label>
-                    {eventMessage && <p className="form-ok">{eventMessage}</p>}
-                    {eventError && <p className="form-error" role="alert">{eventError}</p>}
-                    <button className="btn btn--gold" type="submit">Register</button>
-                  </form>
-                )}
+              <div className="explore-detail__header">
+                <div>
+                  <p className="eyebrow eyebrow--leaf">{selectedItem.meta || 'Details'}</p>
+                  <h2>{selectedItem.title}</h2>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn--outline-dark"
+                  onClick={() => {
+                    setSelectedItem(null)
+                    setSelectedEvent(null)
+                    setDetailBody(null)
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+
+              {detailBody}
+
+              {selectedEvent && (
+                <div className="explore-detail__stack">
+                  <div className="explore-detail__fields">
+                    {selectedEvent.cover_image && (
+                      <Field label="Cover">
+                        <img
+                          className="explore-detail__image"
+                          src={selectedEvent.cover_image}
+                          alt=""
+                        />
+                      </Field>
+                    )}
+                    {textFields(selectedEvent as unknown as Record<string, unknown>, {
+                      description: 'About',
+                      venue: 'Venue',
+                      city: 'City',
+                      country: 'Country',
+                    })}
+                    <Field label="Dates">
+                      <p>
+                        {formatDate(selectedEvent.starts_at)}
+                        {selectedEvent.ends_at ? ` → ${formatDate(selectedEvent.ends_at)}` : ''}
+                      </p>
+                    </Field>
+                    {selectedEvent.speakers && selectedEvent.speakers.length > 0 && (
+                      <div className="explore-detail__field explore-detail__field--wide">
+                        <strong>Speakers</strong>
+                        <ul>
+                          {selectedEvent.speakers.map((speaker) => (
+                            <li key={speaker.id}>
+                              <strong>{speaker.full_name}</strong>
+                              {[speaker.title, speaker.organization].filter(Boolean).join(' · ')}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                  {selectedEvent.registration_open && (
+                    <form className="form-stack explore-form" onSubmit={submitEventRegistration}>
+                      <h3>Register for this event</h3>
+                      <label>
+                        Full name
+                        <input name="full_name" required />
+                      </label>
+                      <label>
+                        Email
+                        <input name="email" type="email" required />
+                      </label>
+                      <label>
+                        Organization
+                        <input name="organization" />
+                      </label>
+                      <label>
+                        Your role
+                        <select name="role" required defaultValue="other">
+                          <option value="innovator">Innovator</option>
+                          <option value="institution">Institution</option>
+                          <option value="funder">Funder</option>
+                          <option value="mentor">Mentor</option>
+                          <option value="media">Media</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </label>
+                      {eventMessage && <p className="form-ok">{eventMessage}</p>}
+                      {eventError && (
+                        <p className="form-error" role="alert">
+                          {eventError}
+                        </p>
+                      )}
+                      <button className="btn btn--gold" type="submit">
+                        Register
+                      </button>
+                    </form>
+                  )}
+                </div>
+              )}
             </section>
           )}
-          {detailError && <p className="form-error" role="alert">{detailError}</p>}
 
-          <section className="explore-section" id="impact">
-            <h2 className="section-title">Impact breakdown</h2>
-            <ImpactBreakdown />
-          </section>
+          {detailError && (
+            <p className="form-error" role="alert">
+              {detailError}
+            </p>
+          )}
 
-          <section className="explore-section" id="nominate">
-            <h2 className="section-title">Nominate an innovator</h2>
-            <p className="section-lead">Send a nomination to one of the published award categories.</p>
-            {awardCategories?.error ? (
-              <p className="form-error" role="alert">
-                Award categories could not be loaded. The page will retry automatically.
-              </p>
-            ) : categories.length === 0 ? (
-              <p role="status">
-                No award categories are currently published. This section updates automatically when categories are added.
-              </p>
-            ) : (
+          {showImpact && stats.length > 0 && (
+            <section className="explore-section" id="impact">
+              <h2 className="section-title">Impact</h2>
+              <p className="section-lead">Numbers published by AxonAfrica — no estimates added here.</p>
+              <div className="grid-3 explore-section__grid">
+                {stats.map((stat) => (
+                  <article className="card explore-card" key={stat.key}>
+                    <strong className="explore-stat-value">{stat.value}</strong>
+                    <p>{stat.label}</p>
+                  </article>
+                ))}
+                {breakdown && breakdown.alumni_count > 0 && (
+                  <article className="card explore-card">
+                    <strong className="explore-stat-value">{breakdown.alumni_count}</strong>
+                    <p>Alumni innovators</p>
+                  </article>
+                )}
+                {breakdown && breakdown.active_cohort_innovators > 0 && (
+                  <article className="card explore-card">
+                    <strong className="explore-stat-value">{breakdown.active_cohort_innovators}</strong>
+                    <p>Active cohort innovators</p>
+                  </article>
+                )}
+              </div>
+              {breakdown && (breakdown.by_country.length > 0 || breakdown.by_stage.length > 0) && (
+                <div className="grid-3 explore-section__grid" style={{ marginTop: '1rem' }}>
+                  {breakdown.by_country.length > 0 && (
+                    <article className="card">
+                      <h3>By country</h3>
+                      <ul>
+                        {breakdown.by_country.map((row) => (
+                          <li key={row.label}>
+                            {row.label}: {row.count}
+                          </li>
+                        ))}
+                      </ul>
+                    </article>
+                  )}
+                  {breakdown.by_stage.length > 0 && (
+                    <article className="card">
+                      <h3>By stage</h3>
+                      <ul>
+                        {breakdown.by_stage.map((row) => (
+                          <li key={row.code || row.label}>
+                            {row.label}: {row.count}
+                          </li>
+                        ))}
+                      </ul>
+                    </article>
+                  )}
+                </div>
+              )}
+            </section>
+          )}
+
+          {showNominate && (
+            <section className="explore-section" id="nominate">
+              <h2 className="section-title">Nominate an innovator</h2>
+              <p className="section-lead">Send a nomination to a published award category.</p>
               <form className="card form-stack explore-form" onSubmit={submitNomination}>
                 <label>
                   Award category
                   <select name="category" required defaultValue="">
-                    <option value="" disabled>Select a category</option>
-                    {categories.map((item) => (
-                      <option key={item.key} value={item.key}>{item.title}</option>
+                    <option value="" disabled>
+                      Select a category
+                    </option>
+                    {awardCategories.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
                     ))}
                   </select>
                 </label>
-                <label>Nominee name<input name="nominee_name" required /></label>
-                <label>Nominee institution<input name="nominee_institution" /></label>
-                <label>Why are you nominating them?<textarea name="reason" required /></label>
-                <label>Your name<input name="nominator_name" required /></label>
-                <label>Your email<input name="nominator_email" type="email" required /></label>
+                <label>
+                  Nominee name
+                  <input name="nominee_name" required />
+                </label>
+                <label>
+                  Nominee institution
+                  <input name="nominee_institution" />
+                </label>
+                <label>
+                  Why are you nominating them?
+                  <textarea name="reason" required />
+                </label>
+                <label>
+                  Your name
+                  <input name="nominator_name" required />
+                </label>
+                <label>
+                  Your email
+                  <input name="nominator_email" type="email" required />
+                </label>
                 {nominationMessage && <p className="form-ok">{nominationMessage}</p>}
-                {nominationError && <p className="form-error" role="alert">{nominationError}</p>}
-                <button className="btn btn--gold" type="submit">Submit nomination</button>
+                {nominationError && (
+                  <p className="form-error" role="alert">
+                    {nominationError}
+                  </p>
+                )}
+                <button className="btn btn--gold" type="submit">
+                  Submit nomination
+                </button>
               </form>
-            )}
-          </section>
+            </section>
+          )}
         </div>
       </section>
     </>
-  )
-}
-
-function ImpactBreakdown() {
-  const [data, setData] = useState<Awaited<ReturnType<typeof api.impactBreakdown>> | null>(null)
-  const [stats, setStats] = useState<Awaited<ReturnType<typeof api.impactStats>> | null>(null)
-  const [error, setError] = useState('')
-  useEffect(() => {
-    let active = true
-    let refreshing = false
-
-    async function refresh() {
-      if (refreshing || document.visibilityState === 'hidden') return
-      refreshing = true
-      try {
-        const [breakdown, impactStats] = await Promise.all([
-          api.impactBreakdown(),
-          api.impactStats(),
-        ])
-        if (!active) return
-        setData(breakdown)
-        setStats(impactStats)
-        setError('')
-      } catch (cause) {
-        if (active) {
-          setError(cause instanceof ApiError ? cause.message : 'Impact data could not be loaded.')
-        }
-      } finally {
-        refreshing = false
-      }
-    }
-
-    function refreshWhenVisible() {
-      if (document.visibilityState === 'visible') void refresh()
-    }
-
-    void refresh()
-    const timer = window.setInterval(() => void refresh(), API_REFRESH_INTERVAL)
-    document.addEventListener('visibilitychange', refreshWhenVisible)
-    window.addEventListener('focus', refreshWhenVisible)
-    return () => {
-      active = false
-      window.clearInterval(timer)
-      document.removeEventListener('visibilitychange', refreshWhenVisible)
-      window.removeEventListener('focus', refreshWhenVisible)
-    }
-  }, [])
-  if (error && !data) return <p className="form-error" role="alert">{error}</p>
-  if (!data || !stats) return <p role="status">Loading impact data…</p>
-  return (
-    <div aria-live="polite">
-      {error && <p className="form-error" role="alert">{error} Showing the last successfully loaded impact data.</p>}
-      <div className="grid-3">
-        {stats.map((stat) => (
-          <div className="card" key={stat.key}>
-            <strong>{stat.value}</strong>
-            <p>{stat.label}</p>
-          </div>
-        ))}
-        <div className="card"><strong>{data.alumni_count}</strong><p>Alumni innovators</p></div>
-        <div className="card"><strong>{data.active_cohort_innovators}</strong><p>Active cohort innovators</p></div>
-      </div>
-      <div className="grid-3" style={{ marginTop: '1rem' }}>
-        <div className="card">
-          <h3>By country</h3>
-          {data.by_country.length ? <ul>{data.by_country.map((item) => <li key={item.label}>{item.label}: {item.count}</li>)}</ul> : <p>No country breakdown published.</p>}
-        </div>
-        <div className="card">
-          <h3>By stage</h3>
-          {data.by_stage.length ? <ul>{data.by_stage.map((item) => <li key={item.code || item.label}>{item.label}: {item.count}</li>)}</ul> : <p>No stage breakdown published.</p>}
-        </div>
-      </div>
-    </div>
   )
 }
