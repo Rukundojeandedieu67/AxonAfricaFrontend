@@ -3,10 +3,10 @@
 }
 
 .account-hero {
-  min-height: min(52svh, 460px);
+  min-height: calc(100svh - var(--header-h));
   display: flex;
-  align-items: flex-end;
-  padding: clamp(4rem, 10vw, 6rem) 0 2.5rem;
+  align-items: center;
+  padding: 3.25rem 0 4.25rem;
 }
 
 .account-hero__inner {
@@ -18,13 +18,11 @@
 
 .account-hero__brand {
   display: block;
-  width: min(200px, 64vw);
+  width: min(240px, 72vw);
   height: auto;
   margin-bottom: 1.15rem;
-  border-radius: 14px;
-  background: #fff;
-  padding: 0.4rem 0.55rem;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+  padding: 0.45rem 0.65rem;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
 }
 
 .account-hero h1 {
