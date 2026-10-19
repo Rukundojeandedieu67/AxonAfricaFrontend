@@ -9,20 +9,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
+  background: transparent;
   border-radius: 14px;
   padding: 0.35rem 0.55rem;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
-  line-height: 0;
-}
-
-.logo-frame--flush {
   box-shadow: none;
-  border: 1px solid color-mix(in srgb, var(--deep-green) 14%, transparent);
-}
-
-.logo-link--md .logo-frame {
-  background: transparent;
+  line-height: 0;
 }
 
 .logo-img {
@@ -37,7 +28,12 @@
 }
 
 .logo-link--md .logo-img {
-  height: 38px;
+  width: 56px;
+  height: 56px;
+}
+
+.logo-link--md .logo-frame {
+  padding: 0;
 }
 
 .logo-link--lg .logo-img {
@@ -45,10 +41,6 @@
 }
 
 @media (min-width: 900px) {
-  .logo-link--md .logo-img {
-    height: 42px;
-  }
-
   .logo-link--lg .logo-img {
     height: 58px;
   }
