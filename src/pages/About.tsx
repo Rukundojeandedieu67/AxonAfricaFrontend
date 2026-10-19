@@ -39,10 +39,12 @@ export function AboutPage() {
         <HeroBackgroundSlides />
         <div className="container">
           <p className="eyebrow eyebrow--on-dark">About &amp; Team</p>
-          <h1>A youth-led organization with a serious purpose.</h1>
-          <p>
+          <h1>
             AxonAfrica closes the gap between brilliant health ideas and deployed solutions —
             carrying scholars from classroom insight to institutional impact.
+          </h1>
+          <p>
+            
           </p>
         </div>
       </section>
