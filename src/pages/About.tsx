@@ -95,7 +95,7 @@ export function AboutPage() {
         <div className="container">
           <Reveal>
             <p className="eyebrow eyebrow--leaf">Team</p>
-            <h2 className="section-title">Meet the people leading the work</h2>
+            <h2 className="section-title">Our Changemakers</h2>
           </Reveal>
           <div className="grid-3" style={{ marginTop: '1.5rem' }}>
             {team.map((member) => (
