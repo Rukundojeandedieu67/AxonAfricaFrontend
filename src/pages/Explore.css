@@ -3,6 +3,12 @@
   overflow: clip;
 }
 
+@media (min-width: 1200px) {
+  .explore-page .container {
+    width: min(1280px, calc(100% - 4rem));
+  }
+}
+
 .explore-hero {
   min-height: calc(100svh - var(--header-h));
   display: flex;

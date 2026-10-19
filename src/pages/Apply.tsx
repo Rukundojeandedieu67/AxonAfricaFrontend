@@ -1,8 +1,22 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { ApiError, api, type ApplicationPayload, type ApplicationWindow } from '../api/client'
 import { HeroBackgroundSlides } from '../components/HeroBackgroundSlides'
+import './Apply.css'
 
 const DRAFT_KEY = 'axonafrica-apply-draft'
+const countryCodes = `
+AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ
+CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR
+GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO
+JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ
+MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA
+RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO
+TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW
+`.trim().split(/\s+/)
+const countryNames = new Intl.DisplayNames(['en'], { type: 'region' })
+const countries = countryCodes
+  .map((code) => ({ code, name: countryNames.of(code) ?? code }))
+  .sort((a, b) => a.name.localeCompare(b.name))
 
 type Draft = Omit<ApplicationPayload, 'cv' | 'pitch_deck'> & {
   skillsHave: string
@@ -30,7 +44,7 @@ const empty: Draft = {
   consent: false,
 }
 
-const steps = ['About you', 'Your idea', 'Your team', 'Commitment'] as const
+const steps = ['About you', 'Your health idea', 'Your experience', 'Commitment'] as const
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat(undefined, {
@@ -204,17 +218,17 @@ export function ApplyPage() {
         <HeroBackgroundSlides />
         <div className="container">
           <p className="eyebrow eyebrow--on-dark">Apply</p>
-          <h1>Tell us about the idea that will not leave you alone.</h1>
+          <h1>Apply to the AxonAfrica Health Innovation Program</h1>
           <p>
             {windowIsOpen
-              ? 'Applications are open now. Your progress saves automatically on this device.'
+              ? 'Tell us about yourself and the health innovation you want to develop. Your progress saves automatically on this device.'
               : 'Check the current application window and deadline below.'}
           </p>
         </div>
       </section>
 
-      <section className="section">
-        <div className="container" style={{ maxWidth: 640 }}>
+      <section className="section apply-section">
+        <div className="container apply-container">
           {status === 'done' ? (
             <div className="card card--soft">
               <h2 style={{ color: 'var(--heading-color)' }}>Application received</h2>
@@ -264,7 +278,7 @@ export function ApplyPage() {
                   Time remaining: <strong>{formatCountdown(remainingMs)}</strong>
                 </p>
               </div>
-              <form className="card" onSubmit={onSubmit}>
+              <form className="card apply-form" onSubmit={onSubmit}>
               <div style={{ marginBottom: '1.25rem' }}>
                 <div
                   style={{
@@ -304,43 +318,48 @@ export function ApplyPage() {
                 </div>
               </div>
 
-              <div className="form-stack">
+              <div className="form-stack apply-form__fields">
                 {step === 0 && (
                   <>
                     <label>
-                      Full name
+                      Full name (as shown on your official documents)
                       <input
                         required
+                        autoComplete="name"
                         value={draft.full_name}
                         onChange={(e) => update('full_name', e.target.value)}
                       />
                     </label>
                     <label>
-                      Email
+                      Email address
                       <input
                         type="email"
                         required
+                        autoComplete="email"
                         value={draft.email}
                         onChange={(e) => update('email', e.target.value)}
                       />
                     </label>
                     <label>
-                      Phone
+                      Phone number (include country code)
                       <input
+                        type="tel"
+                        autoComplete="tel"
                         value={draft.phone}
                         onChange={(e) => update('phone', e.target.value)}
                       />
                     </label>
                     <label>
-                      University or organization
+                      University or institution
                       <input
                         required
+                        autoComplete="organization"
                         value={draft.university}
                         onChange={(e) => update('university', e.target.value)}
                       />
                     </label>
                     <label>
-                      Faculty and year
+                      Faculty or field of study
                       <input
                         required
                         value={draft.faculty}
@@ -348,23 +367,32 @@ export function ApplyPage() {
                       />
                     </label>
                     <label>
-                      Year of study (number)
+                      Current year of study
                       <input
                         type="number"
                         min={1}
                         max={10}
                         required
+                        inputMode="numeric"
                         value={draft.year_of_study}
                         onChange={(e) => update('year_of_study', Number(e.target.value))}
                       />
                     </label>
                     <label>
-                      Country
-                      <input
+                      Country of residence
+                      <select
                         required
+                        autoComplete="country-name"
                         value={draft.country}
                         onChange={(e) => update('country', e.target.value)}
-                      />
+                      >
+                        <option value="">Select your country</option>
+                        {countries.map(({ code, name }) => (
+                          <option key={code} value={name}>
+                            {name}
+                          </option>
+                        ))}
+                      </select>
                     </label>
                   </>
                 )}
@@ -372,25 +400,29 @@ export function ApplyPage() {
                 {step === 1 && (
                   <>
                     <label>
-                      Idea title
+                      Working title for your health innovation
                       <input
                         required
+                        maxLength={200}
+                        placeholder="A short, clear name for your idea"
                         value={draft.idea_title}
                         onChange={(e) => update('idea_title', e.target.value)}
                       />
                     </label>
                     <label>
-                      The health problem you have seen
+                      What health problem are you addressing, and who is affected?
                       <textarea
                         required
+                        placeholder="Describe the problem, who experiences it, and what you have observed or learned about it."
                         value={draft.problem_statement}
                         onChange={(e) => update('problem_statement', e.target.value)}
                       />
                     </label>
                     <label>
-                      Your proposed solution and what you have done so far
+                      What solution do you propose, and what progress have you made?
                       <textarea
                         required
+                        placeholder="Explain how your idea would address the problem, who would use it, and any research, prototype, or testing completed so far."
                         value={draft.idea_summary}
                         onChange={(e) => update('idea_summary', e.target.value)}
                       />
@@ -401,22 +433,24 @@ export function ApplyPage() {
                 {step === 2 && (
                   <>
                     <label>
-                      Your strongest skills
+                    What relevant skills or experience do you bring to this idea?
                       <textarea
                         required
-                        value={draft.skillsHave}
-                        onChange={(e) => update('skillsHave', e.target.value)}
-                      />
-                    </label>
-                    <label>
-                      Skills you are missing (design, software, data…)
-                      <textarea
-                        value={draft.skillsNeed}
-                        onChange={(e) => update('skillsNeed', e.target.value)}
-                      />
-                    </label>
-                    <label>
-                      CV (PDF, optional)
+                      placeholder="For example: health sciences, community work, research, design, software, or data."
+                      value={draft.skillsHave}
+                      onChange={(e) => update('skillsHave', e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    What skills, resources, or collaborators would help you move it forward?
+                    <textarea
+                      placeholder="Tell us where you would value guidance or support."
+                      value={draft.skillsNeed}
+                      onChange={(e) => update('skillsNeed', e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Upload your CV or résumé (PDF, optional)
                       <input
                         type="file"
                         accept="application/pdf,.pdf"
@@ -424,7 +458,7 @@ export function ApplyPage() {
                       />
                     </label>
                     <label>
-                      Pitch deck (PDF, optional)
+                      Upload a pitch deck or supporting document (PDF, optional)
                       <input
                         type="file"
                         accept="application/pdf,.pdf"
@@ -437,18 +471,20 @@ export function ApplyPage() {
                 {step === 3 && (
                   <>
                     <label>
-                      Availability
+                    How much time can you commit to the program each week?
                       <textarea
                         required
-                        value={draft.availability}
-                        onChange={(e) => update('availability', e.target.value)}
-                      />
-                    </label>
-                    <label>
-                      Short motivation statement
-                      <textarea
-                        required
-                        value={draft.motivation}
+                      placeholder="Include your weekly availability and any important scheduling constraints."
+                      value={draft.availability}
+                      onChange={(e) => update('availability', e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Why do you want to join, and how would the program help your idea?
+                    <textarea
+                      required
+                      placeholder="Share your motivation and what you hope to achieve during the program."
+                      value={draft.motivation}
                         onChange={(e) => update('motivation', e.target.value)}
                       />
                     </label>
