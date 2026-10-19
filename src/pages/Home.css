@@ -185,9 +185,10 @@
   display: block;
   width: min(240px, 72vw);
   height: auto;
-  margin-bottom: 1.35rem;
-  border-radius: 16px;
-  background: #fff;
+  /* margin-bottom: 1.35rem; */
+  /* border-radius: 16px; */
+  /* background: #fff; */
+ 
   padding: 0.45rem 0.65rem;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
 }

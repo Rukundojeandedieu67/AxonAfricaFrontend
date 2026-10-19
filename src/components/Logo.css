@@ -21,6 +21,10 @@
   border: 1px solid color-mix(in srgb, var(--deep-green) 14%, transparent);
 }
 
+.logo-link--md .logo-frame {
+  background: transparent;
+}
+
 .logo-img {
   display: block;
   width: auto;
